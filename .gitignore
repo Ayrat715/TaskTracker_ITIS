@@ -7,7 +7,7 @@ __pycache__/
 *.pyc
 *.pyo
 
-*.env
+
 # Игнорируем IDE-файлы
 *.idea/
 .vscode/
