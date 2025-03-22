@@ -13,7 +13,6 @@ class ProjectRole(models.Model):
     name = models.CharField(max_length=255)
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
 
-# TODO: Поле нагрузки денормализует БД, но будто бы в данном случае так лучше будет.
 class Employee(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     project = models.ForeignKey(Project, on_delete=models.CASCADE)

@@ -3,13 +3,11 @@ from django.db import models
 from projects.models import Employee, Project
 from users.models import User
 
-# TODO: Модель нужна для анализа схожести задач, скорее всего еще в нее поля будем добавлять.
 class TaskCategory(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     keywords = models.TextField(blank=True)
 
-# TODO: Модель для статуса задач(какие-то можно еще добавить, это первые, что мне в голову пришли.
 class Status(models.Model):
     TYPE_CHOICES = [
         ('active', 'Active'),
@@ -18,7 +16,6 @@ class Status(models.Model):
     ]
     type = models.CharField(max_length=20, choices=TYPE_CHOICES, unique=True)
 
-# TODO: Тут думаю объяснять ничего не нужно, также жду предложений и коррективов.
 class Priority(models.Model):
     TYPE_WEIGHT_MAP = {
         'high': 4,
@@ -28,17 +25,13 @@ class Priority(models.Model):
     }
     TYPE_CHOICES = [(key, key.title()) for key in TYPE_WEIGHT_MAP.keys()]
     type = models.CharField(max_length=10, choices=TYPE_CHOICES, unique=True)
-    weight = models.IntegerField()
 
     def __str__(self):
-        return f"{self.get_type_display()} (weight: {self.weight})"
+        return f"{self.get_type_display()} (weight: {self.get_weight()})"
 
-    def clean(self):
-        if self.weight != self.TYPE_WEIGHT_MAP.get(self.type):
-            raise ValidationError(
-                f'Неверный вес для типа {self.type}. '
-                f'Ожидается {self.TYPE_WEIGHT_MAP[self.type]}'
-            )
+    def get_weight(self):
+        return self.TYPE_WEIGHT_MAP[self.type]
+
     def save(self, *args, **kwargs):
         self.weight = self.TYPE_WEIGHT_MAP[self.type]
         super().save(*args, **kwargs)
@@ -50,7 +43,17 @@ class Sprint(models.Model):
     end_time = models.DateTimeField()
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
 
+    def clean(self):
+        if self.start_time >= self.end_time:
+            raise ValidationError("The start date of the sprint must be earlier than the end date.")
+
 class Task(models.Model):
+    def clean(self):
+        if self.start_time >= self.end_time:
+            raise ValidationError("The start date of the task must be earlier than the end date.")
+        if self.given_time is not None and self.given_time > self.start_time:
+            raise ValidationError("The issue task date cannot be later than the start date.")
+
     name = models.CharField(max_length=255, null=False)
     description = models.TextField()
     status = models.ForeignKey(Status, on_delete=models.SET_NULL, null=True)
@@ -58,7 +61,7 @@ class Task(models.Model):
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    priority = models.ForeignKey(Priority, on_delete=models.PROTECT, default=None)
+    priority = models.ForeignKey(Priority, on_delete=models.PROTECT, null=True, blank=True)
     category = models.ForeignKey(
         TaskCategory,
         on_delete=models.SET_NULL,

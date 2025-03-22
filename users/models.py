@@ -1,6 +1,6 @@
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager, Group
 from django.db import models
-
 
 class UserManager(BaseUserManager):
     def create_user(self, email, name, password=None):
@@ -18,9 +18,6 @@ class UserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
-class Group(models.Model):
-    name = models.CharField(max_length=100)
-
 class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     name = models.CharField(max_length=255)
@@ -28,11 +25,6 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['name']
-    groups = models.ManyToManyField(Group, through='GroupUser')
+    groups = models.ManyToManyField(Group)
     objects = UserManager()
-
-
-class GroupUser(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    group = models.ForeignKey(Group, on_delete=models.CASCADE)
 
