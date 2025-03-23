@@ -57,7 +57,7 @@ class Task(models.Model):
     name = models.CharField(max_length=255, null=False)
     description = models.TextField()
     status = models.ForeignKey(Status, on_delete=models.SET_NULL, null=True)
-    given_time = models.DateTimeField()
+    given_time = models.DateTimeField(null=True, blank=True)
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)

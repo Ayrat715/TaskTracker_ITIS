@@ -1,4 +1,6 @@
 from django.db import models
+from rest_framework.exceptions import ValidationError
+
 from users.models import User, Group
 
 
@@ -8,6 +10,9 @@ class Project(models.Model):
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
     group = models.ForeignKey(Group, on_delete=models.CASCADE)
+    def clean(self):
+        if self.start_time >= self.end_time:
+            raise ValidationError("End time must be after start time.")
 
 class ProjectRole(models.Model):
     name = models.CharField(max_length=255)
