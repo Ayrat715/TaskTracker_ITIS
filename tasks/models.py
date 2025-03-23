@@ -4,12 +4,20 @@ from projects.models import Employee, Project
 from users.models import User
 
 class TaskCategory(models.Model):
+    """ Категории для классификации задач по темам или типам работ.
+        Содержит ключевые слова для автоматической категоризации задач
+        с использованием NLP-анализа при создании задач.
+        Примеры: 'Разработка', 'Тестирование', 'Документация'
+    """
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     keywords = models.TextField(blank=True)
 
 class Status(models.Model):
     TYPE_CHOICES = [
+        ('required check', 'Required check'),
+        ('planned', 'Planned'),
+        ('planned', 'Planned'),
         ('active', 'Active'),
         ('completed', 'Completed'),
         ('archived', 'Archived'),
@@ -71,7 +79,13 @@ class Task(models.Model):
         null=True,
         blank=True,
         help_text="Сохраненные результаты NLP анализа (ключевые слова, срочность и т.д.)"
-
+        """
+        Метаданные NLP-обработки описания задачи. Содержит:
+        - извлеченные ключевые слова
+        - распознанные даты/дедлайны
+        - оценку срочности
+        - другие параметры для автоматического управления задачами
+        """
     )
 
 class Executor(models.Model):

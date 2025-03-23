@@ -43,6 +43,7 @@ class SprintViewSetTest(APITestCase):
             'end_time': '2025-02-10T10:00:00Z',
             'project': self.project
         })
+
         update_data = {
             'name': 'Updated Sprint',
             'end_time': '2025-02-15T10:00:00Z'
@@ -138,7 +139,7 @@ class TaskViewSetTest(APITestCase):
         update_data = {
             'name': 'Updated Task',
             'description': 'New Description',
-            'sprint_ids': [new_sprint.id],
+            'sprint': [new_sprint.id],
             'end_time': "2025-08-10T10:00:00Z"
         }
         response = self.client.put(f'/api/tasks/{task.id}/', update_data, format='json')

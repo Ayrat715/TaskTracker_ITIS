@@ -1,4 +1,6 @@
-from rest_framework import serializers
+from rest_framework import serializers, status
+from rest_framework.response import Response
+
 from projects.models import Employee
 from tasks.models import Sprint, Task, SprintTask
 
@@ -55,7 +57,11 @@ class TaskSerializer(serializers.ModelSerializer):
         extra_kwargs = {'executor': {'read_only': True}}
 
     def create(self, validated_data):
-        sprint_ids = validated_data.pop('sprint_ids', [])
+        sprint_ids = validated_data.pop('sprint', [])
+        sprints = Sprint.objects.filter(id__in=sprint_ids)
+        if len(sprints) != len(sprint_ids):
+            return Response({"sprint": ["Some sprints do not exist."]},
+                            status=status.HTTP_400_BAD_REQUEST)
         executor = validated_data.pop('executor', None)
         task = Task.objects.create(**validated_data)
         if executor:
@@ -68,7 +74,7 @@ class TaskSerializer(serializers.ModelSerializer):
         return task
 
     def update(self, instance, validated_data):
-        sprint_ids = validated_data.pop('sprint_ids', None)
+        sprint_ids = validated_data.pop('sprint', None)
         executor = validated_data.pop('executor', None)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
