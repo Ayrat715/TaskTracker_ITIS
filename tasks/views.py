@@ -5,7 +5,7 @@ from rest_framework import status
 from django.shortcuts import get_object_or_404
 from projects.models import Employee
 from tasks.serializers import SprintSerializer, TaskSerializer
-from tasks.models import Sprint, Task, SprintTask, Executor
+from tasks.models import Sprint, Task, SprintTask, Executor, Priority
 import logging
 logger = logging.getLogger(__name__)
 
