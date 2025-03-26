@@ -15,4 +15,4 @@ __pycache__/
 *.swp
 
 # Игнорируем системные службы
-.DS_Store
+*.DS_Store
