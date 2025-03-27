@@ -50,4 +50,4 @@ class UserLoginView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         user = serializer.validated_data['user']
         login(request, user)
-        return Response(HTTPStatus.OK)
+        return Response({"message": "Login successful"}, HTTPStatus.OK)
