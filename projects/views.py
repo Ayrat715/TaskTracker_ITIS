@@ -22,7 +22,7 @@ class ProjectCreateApiView(generics.CreateAPIView):
 
     queryset = Project.objects.all()
     serializer_class = ProjectSerializer
-    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+    permission_classes = (permissions.IsAuthenticated,)
 
 
 class ProjectDetailApiView(generics.RetrieveUpdateDestroyAPIView):

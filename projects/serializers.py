@@ -33,5 +33,5 @@ class ProjectSerializer(serializers.ModelSerializer):
         """
 
         if data['start_time'] > data['end_time']:
-            raise serializers.ValidationError("end time must occur after start time")
+            raise serializers.ValidationError("End time must occur after start time")
         return data
