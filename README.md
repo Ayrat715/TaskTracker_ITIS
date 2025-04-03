@@ -2,12 +2,12 @@
 This is a project on the discipline "Digital Departments", the purpose of which will be to create a website for tracking tasks within projects for the Institute of Information Technology and Intelligent Systems.
 API Endpoints
 
-### Все API endpoints доступны по базовому URL (без деплоя пока https://localhost:8000/api/)
+### Все API endpoints доступны по базовому URL (без деплоя пока https://localhost:8000/)
 
 ## Спринты (Sprints)
 ### Обязательные поля при создании: name, start_time, project
 
-### GET /sprints/ - Получить список всех спринтов
+### GET task/sprints/ - Получить список всех спринтов
 
 #### Ответ (200 OK):
 
@@ -31,7 +31,7 @@ API Endpoints
         ...
     ]
 
-### POST /sprints/ - Создать новый спринт
+### POST task/sprints/ - Создать новый спринт
 
 #### Тело запроса:
 
@@ -54,7 +54,7 @@ API Endpoints
         "project": <number>
     }
 
-### GET /sprints/{id}/ - Получить детали спринта
+### GET task/sprints/{id}/ - Получить детали спринта
 
 #### Ответ (200 OK):
 
@@ -67,7 +67,7 @@ API Endpoints
         "project": <number>
     }
 
-### PUT /sprints/{id}/ - Обновить спринт
+### PUT task/sprints/{id}/ - Обновить спринт
 
 #### Тело запроса:
 
@@ -91,9 +91,9 @@ API Endpoints
         "project": <number>
     }
 
-### PATCH /sprints/{id}/ - Частично обновить спринт
+### PATCH task/sprints/{id}/ - Частично обновить спринт
 
-### DELETE /sprints/{id}/ - Удалить спринт
+### DELETE task/sprints/{id}/ - Удалить спринт
 
 ## Ошибки:
 
@@ -106,7 +106,7 @@ API Endpoints
 ## Задачи (Tasks)
 ### Обязательные поля при создании: name, executor, sprint(массив), start_time, author
 
-### GET /tasks/ - Получить список всех задач
+### GET task/tasks/ - Получить список всех задач
 
 #### Ответ (200 OK):
 
@@ -127,7 +127,7 @@ API Endpoints
         }
     ]
 
-### POST /tasks/ - Создать новую задачу
+### POST task/tasks/ - Создать новую задачу
 
 #### Тело запроса:
 
@@ -146,7 +146,7 @@ API Endpoints
     }
 
 
-### GET /tasks/{id}/ - Получить детали задачи
+### GET task/tasks/{id}/ - Получить детали задачи
 
 #### Ответ (200 OK):
 
@@ -165,7 +165,7 @@ API Endpoints
         "nlp_metadata": JSON
     }
 
-### PUT /tasks/{id}/ - Обновить задачу
+### PUT task/tasks/{id}/ - Обновить задачу
 
 #### Ответ (200 OK):
 
@@ -184,9 +184,9 @@ API Endpoints
         "nlp_metadata": JSON
     }
 
-### PATCH /tasks/{id}/ - Частично обновить задачу
+### PATCH task/tasks/{id}/ - Частично обновить задачу
 
-### DELETE /tasks/{id}/ - Удалить задачу
+### DELETE task/tasks/{id}/ - Удалить задачу
 
 ### Ошибки:
 
@@ -221,11 +221,11 @@ API Endpoints
         "password2": <string>
     }
 
-### POST /users/registration-user/ - Регистрация нового пользователя
+### POST /account/registration-user/ - Регистрация нового пользователя
 
 ## Авторизация пользователя
 
-### POST /users/login-user/ - Вход в систему
+### POST /account/login-user/ - Вход в систему
 
     {
         "email": <string>,
