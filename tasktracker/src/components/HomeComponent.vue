@@ -1,14 +1,14 @@
 <template>
-  <div class="not-found">
-    <h1>Главная</h1>
-    <p>К сожалению, запрашиваемая страница не существует.</p>
+    <div class="not-found">
+        <h1>Главная</h1>
+        <p>К сожалению, запрашиваемая страница не существует.</p>
 
-  </div>
+    </div>
 </template>
 
 <script>
 
 export default {
-  name: 'NotFoundPage',
+    name: 'NotFoundPage',
 };
 </script>
