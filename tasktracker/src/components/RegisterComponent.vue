@@ -39,7 +39,8 @@
               class="form-input"
           >
         </div>
-        <p class="login-link">Уже есть аккаунт? <a href="/login">Войти</a></p>
+
+        <p class="login-link">Уже есть аккаунт? <router-link to="/login">Войти</router-link></p>
         <button type="submit" class="submit-btn">Зарегистрироваться</button>
       </form>
       <p v-if="error" class="error-message">{{ error }}</p>
@@ -123,7 +124,7 @@ export default {
 }
 </script>
 
-<style>
+<style scoped>
 
 body {
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -140,15 +141,15 @@ body {
 
 .register-form {
   width: 100%;
-  max-width: 500px;
-  padding: 32px;
+  max-width: 400px;
+  padding: 40px;
 }
 
 .form-title {
   text-align: center;
   margin-bottom: 20px;
   color: #333;
-  font-size: 26px;
+  font-size: 40px;
 }
 
 .form {
@@ -163,7 +164,7 @@ body {
 
 .form-input {
   width: 100%;
-  padding: 10px 12px;
+  padding: 6px 12px;
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 14px;
@@ -182,7 +183,7 @@ body {
   background-color: #3B82F6;
   color: white;
   border: none;
-  padding: 10px 12px;
+  padding: 6px;
   border-radius: 4px;
   font-size: 14px;
   font-weight: 500;
