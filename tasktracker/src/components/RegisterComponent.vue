@@ -57,6 +57,7 @@
 import axios from "axios";
 
 export default {
+    name : 'RegisterComponent',
     data() {
         return {
             email: '',

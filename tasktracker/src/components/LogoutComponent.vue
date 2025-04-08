@@ -2,13 +2,24 @@
     <button @click="handleLogout">Выйти</button>
 </template>
 
-<script setup>
+<script>
 import {useAuthStore} from '@/stores/auth';
 
-const authStore = useAuthStore();
-
-const handleLogout = async () => {
-    await authStore.logout();
-    this.$router.push('/login')
-};
+export default {
+    name : 'LogoutComponent',
+    data() {
+        return {
+            authStore: null
+        };
+    },
+    created() {
+        this.authStore = useAuthStore();
+    },
+    methods: {
+        async handleLogout() {
+            await this.authStore.logout();
+            this.$router.push('/login');
+        }
+    }
+}
 </script>

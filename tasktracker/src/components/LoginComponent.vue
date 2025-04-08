@@ -43,73 +43,80 @@
     </div>
 </template>
 
-<script setup>
-import {onMounted, ref} from 'vue'
+<script>
 import {useRouter} from 'vue-router'
 import axios from 'axios'
 import {useAuthStore} from '@/stores/auth'
 
-const email = ref('')
-const password = ref('')
-const rememberMe = ref(false)
-const error = ref('')
-const loading = ref(false)
-const router = useRouter()
-const authStore = useAuthStore()
-
-onMounted(() => {
-    const savedEmail = localStorage.getItem('rememberedEmail')
-    if (savedEmail) {
-        email.value = savedEmail
-        rememberMe.value = true
-    }
-})
-
-
-const handleLogin = async () => {
-    error.value = ''
-    loading.value = true
-
-    try {
-        const response = await axios.post('http://localhost:8000/account/login-user/', {
-            email: email.value,
-            password: password.value
-        }, {
-            withCredentials: true,
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken'),
-                'Content-Type': 'application/json'
-            }
-        })
-
-        authStore.setUser(response.data.user)
-
-        if (rememberMe.value) {
-            localStorage.setItem('rememberedEmail', email.value)
-        } else {
-            localStorage.removeItem('rememberedEmail')
+export default {
+    name : 'LoginComponent',
+    data() {
+        return {
+            email: '',
+            password: '',
+            rememberMe: false,
+            error: '',
+            loading: false
         }
-
-        await router.push({name: 'home'})
-    } catch (err) {
-        if (err.response) {
-            if (err.response.status === 400) {
-                error.value = 'Неверные email или пароль'
-            } else {
-                error.value = 'Ошибка сервера. Попробуйте позже.'
-            }
-        } else {
-            error.value = 'Ошибка сети. Проверьте подключение.'
+    },
+    setup() {
+        const authStore = useAuthStore()
+        const router = useRouter()
+        return {authStore, router}
+    },
+    mounted() {
+        const savedEmail = localStorage.getItem('rememberedEmail')
+        if (savedEmail) {
+            this.email = savedEmail
+            this.rememberMe = true
         }
-    } finally {
-        loading.value = false
-    }
-}
+    },
+    methods: {
+        async handleLogin() {
+            this.error = ''
+            this.loading = true
 
-function getCookie(name) {
-    const value = `; ${document.cookie}`
-    const parts = value.split(`; ${name}=`)
-    if (parts.length === 2) return parts.pop().split(';').shift()
+            try {
+                const response = await axios.post('http://localhost:8000/account/login-user/', {
+                    email: this.email,
+                    password: this.password
+                }, {
+                    withCredentials: true,
+                    headers: {
+                        'X-CSRFToken': this.getCookie('csrftoken'),
+                        'Content-Type': 'application/json'
+                    }
+                })
+
+                this.authStore.setUser(response.data.user)
+
+                if (this.rememberMe) {
+                    localStorage.setItem('rememberedEmail', this.email)
+                } else {
+                    localStorage.removeItem('rememberedEmail')
+                }
+
+                await this.router.push({name: 'home'})
+            } catch (err) {
+                if (err.response) {
+                    if (err.response.status === 400) {
+                        this.error = 'Неверные email или пароль'
+                    } else {
+                        this.error = 'Ошибка сервера. Попробуйте позже.'
+                    }
+                } else {
+                    this.error = 'Ошибка сети. Проверьте подключение.'
+                }
+            } finally {
+                this.loading = false
+            }
+        },
+        getCookie(name) {
+            const value = `; ${document.cookie}`
+            const parts = value.split(`; ${name}=`)
+            if (parts.length === 2) return parts.pop().split(';').shift()
+        }
+    }
 }
 </script>
 
@@ -144,7 +151,7 @@ function getCookie(name) {
 }
 
 .form-group {
-  margin-bottom: 6px;
+    margin-bottom: 6px;
 }
 
 .form-input {
