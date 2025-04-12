@@ -172,7 +172,7 @@ class GroupUpdateSerializer(serializers.ModelSerializer):
         model = Group
         fields = ['id', 'add_user_id']
 
-    def update(self, instance: dict, validated_data: dict) -> dict:
+    def update(self, instance: set, validated_data: dict) -> dict:
         """
         Изменение данных группы.
 
