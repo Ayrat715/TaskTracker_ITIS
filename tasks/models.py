@@ -72,7 +72,7 @@ class Task(models.Model):
     given_time = models.DateTimeField(null=True, blank=True)
     start_time = models.DateTimeField()
     end_time = models.DateTimeField(null=True)
-    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    author = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True)
     priority = models.ForeignKey(Priority, on_delete=models.PROTECT, null=True, blank=True)
     category = models.ForeignKey(
         TaskCategory,
