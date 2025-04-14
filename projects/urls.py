@@ -1,10 +1,12 @@
-from django.urls import path
+from rest_framework.routers import DefaultRouter
 
-from projects.views import ProjectCreateApiView, ProjectDetailApiView
+from projects.views import ProjectViewSet, ProjectRoleViewSet, EmployeeViewSet
 
 app_name = "projects"
 
-urlpatterns = [
-    path('create/', ProjectCreateApiView.as_view(), name='create'),
-    path('<int:pk>/', ProjectDetailApiView.as_view(), name='detail'),
-]
+router = DefaultRouter()
+router.register('roles', ProjectRoleViewSet, basename='roles')
+router.register('employees', EmployeeViewSet, basename='employees')
+router.register('', ProjectViewSet, basename='index')
+
+urlpatterns = router.urls
