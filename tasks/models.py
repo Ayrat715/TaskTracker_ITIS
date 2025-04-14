@@ -1,7 +1,12 @@
 from django.core.exceptions import ValidationError
 from django.db import models
+from model_utils.tracker import FieldTracker
 from projects.models import Employee, Project
+from tasks.text_processing import preprocess
+from tasks.ml_utils import extract_task_features
 from users.models import User
+import logging
+logger = logging.getLogger(__name__)
 
 class TaskCategory(models.Model):
     """ Категории для классификации задач по темам или типам работ.
@@ -9,9 +14,31 @@ class TaskCategory(models.Model):
         с использованием NLP-анализа при создании задач.
         Примеры: 'Разработка', 'Тестирование', 'Документация'
     """
+    tracker = FieldTracker(fields=['keywords', 'auto_assign', 'min_confidence'])
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    keywords = models.TextField(blank=True)
+    keywords = models.TextField(
+        blank=True,
+        help_text="Список ключевых слов через запятую"
+    )
+    processed_keywords = models.TextField(
+        blank=True,
+        editable=False,
+        help_text="Автоматически обработанные ключевые слова"
+    )
+
+    def save(self, *args, **kwargs):
+        if self.keywords:
+            processed = [
+                preprocess(kw.strip())
+                for kw in self.keywords.split(',')
+                if kw.strip()
+            ]
+            self.processed_keywords = ','.join(processed)
+        super().save(*args, **kwargs)
+    auto_assign = models.BooleanField(default=False)
+    min_confidence = models.FloatField(default=0.7)
+
 
 class Status(models.Model):
     TYPE_CHOICES = [
@@ -29,6 +56,7 @@ class Status(models.Model):
                              f"Valid types are {', '.join(valid_statuses)}.")
         super().save(*args, **kwargs)
 
+
 class Priority(models.Model):
     TYPE_WEIGHT_MAP = {
         'high': 4,
@@ -38,16 +66,19 @@ class Priority(models.Model):
     }
     TYPE_CHOICES = [(key, key.title()) for key in TYPE_WEIGHT_MAP.keys()]
     type = models.CharField(max_length=10, choices=TYPE_CHOICES, unique=True)
+
     def __str__(self):
         return f"{self.get_type_display()} (weight: {self.get_weight()})"
+
     def get_weight(self):
         return self.TYPE_WEIGHT_MAP[self.type]
+
     def save(self, *args, **kwargs):
-        self.weight = self.TYPE_WEIGHT_MAP[self.type]
         if self.type not in dict(self.TYPE_CHOICES):
             raise ValueError(f"Invalid type: {self.type}. "
                              f"Valid types are {', '.join(dict(self.TYPE_CHOICES).keys())}.")
         super().save(*args, **kwargs)
+
 
 class Sprint(models.Model):
     name = models.CharField(max_length=50)
@@ -60,7 +91,9 @@ class Sprint(models.Model):
         if self.start_time >= self.end_time:
             raise ValidationError("The start date of the sprint must be earlier than the end date.")
 
+
 class Task(models.Model):
+    tracker = FieldTracker(fields=['name', 'description'])
     def clean(self):
         if self.start_time >= self.end_time:
             raise ValidationError("The start date of the task must be earlier than the end date.")
@@ -72,33 +105,82 @@ class Task(models.Model):
     given_time = models.DateTimeField(null=True, blank=True)
     start_time = models.DateTimeField()
     end_time = models.DateTimeField(null=True)
-    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    author = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True)
     priority = models.ForeignKey(Priority, on_delete=models.PROTECT, null=True, blank=True)
+    predicted_duration = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Предсказанное время выполнения в часах"
+    )
     category = models.ForeignKey(
         TaskCategory,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,)
     nlp_metadata = models.JSONField(
+        default=dict,
         null=True,
         blank=True,
         help_text="Сохраненные результаты NLP анализа (ключевые слова, срочность и т.д.)"
-        """
-        Метаданные NLP-обработки описания задачи. Содержит:
-        - извлеченные ключевые слова
-        - распознанные даты/дедлайны
-        - оценку срочности
-        - другие параметры для автоматического управления задачами
-        """
     )
+
+    def _prepare_prediction_input(self):
+        features = extract_task_features(self)
+        return features[:-1]
+
+    def predict_duration(self):
+        """Возвращает предсказанное время в часах и сохраняет в поле"""
+        from tasks.ml_utils import should_use_xgb
+        from tasks.ml_load_model import load_models
+
+        try:
+            xgb_model, lstm_model, preprocessor = load_models()
+
+            if xgb_model is None or preprocessor is None:
+                logger.error("Модели не загружены")
+                return None
+            if should_use_xgb(self.status.type):
+                input_data = self._prepare_prediction_input()
+                processed_input = preprocessor.transform([input_data])
+                seconds = xgb_model.predict(processed_input)[0]
+            else:
+                lstm_input = self._prepare_lstm_input()
+                if lstm_input is None:
+                    return None
+                seconds = lstm_model.predict(lstm_input)[0][0]
+            hours = round(seconds / 3600, 1)
+            self.predicted_duration = hours
+            self.save(update_fields=['predicted_duration'])
+            return hours
+
+        except Exception as e:
+            logger.error(f"Ошибка предсказания: {str(e)}")
+            return None
+
+    def _prepare_lstm_input(self):
+        completed_tasks = Task.objects.filter(
+            status__type='completed',
+            start_time__isnull=False
+        ).order_by('start_time')
+
+        if not completed_tasks.exists():
+            logger.warning("Нет завершенных задач для LSTM")
+            return None
+
+        base_time = completed_tasks.first().start_time
+        features = extract_task_features(self, base_time)
+        return [[features]]
+
 
 class Executor(models.Model):
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
     task = models.ForeignKey(Task, on_delete=models.CASCADE)
 
+
 class SprintTask(models.Model):
     sprint = models.ForeignKey(Sprint, on_delete=models.CASCADE)
     task = models.ForeignKey(Task, on_delete=models.CASCADE)
+
 
 class Comment(models.Model):
     title = models.CharField(max_length=255, null=False)

@@ -2,6 +2,9 @@
 venv/
 .env
 
+.venv
+
+venv
 
 # Игнорируем файлы кэша и временные файлы
 __pycache__/
@@ -19,3 +22,8 @@ __pycache__/
 
 # Дампы данных
 *_db.json
+
+
+cachedir
+
+models

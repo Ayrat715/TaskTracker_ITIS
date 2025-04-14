@@ -1,6 +1,6 @@
 asgiref==3.8.1
 attrs==25.3.0
-Django==4.2
+Django~=4.2.0
 djangorestframework==3.15.2
 dotenv==0.9.9
 iniconfig==2.1.0
@@ -12,3 +12,36 @@ pytest==7.1.2
 python-dotenv==1.0.1
 sqlparse==0.5.3
 tomli==2.2.1
+scikit-learn >= 1.2
+joblib
+keras==3.9.0
+spacy==3.7.4
+https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.0/en_core_web_sm-3.7.0-py3-none-any.whl
+ru-core-news-sm==3.7.0
+https://github.com/explosion/spacy-models/releases/download/ru_core_news_sm-3.7.0/ru_core_news_sm-3.7.0-py3-none-any.whl
+en-core-web-sm==3.7.0
+gensim == 4.3.3
+pymorphy2
+xgboost
+prometheus_client
+langdetect
+psycopg2~=2.9.10
+Jinja2~=3.1.6
+pip~=25.0.1
+wheel~=0.45.1
+protobuf~=4.25.6
+pillow~=11.1.0
+filelock~=3.18.0
+PyYAML~=6.0.2
+numpy == 1.26.4
+thinc==8.2.3
+setuptools==70.0.0
+requests~=2.32.3
+click~=8.1.8
+typing_extensions==4.12.2
+kombu>=5.3.1,<6.0
+celery~=5.5.1
+django-model-utils~=5.0.0
+django-email-users~=2.1.0
+django-redis==5.4.0
+scipy >= 1.10
