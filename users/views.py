@@ -12,7 +12,7 @@ from rest_framework.views import APIView
 
 from users.serializers import (UserRegistrationSerializer, UserLoginSerializer,
                                UserSerializer, GroupCreateSerializer,
-                               GroupUpdateSerializer, User)
+                               GroupUpdateSerializer, User, UserDataSerializer)
 from users.users_permitions import UserPermitions
 
 
@@ -45,7 +45,7 @@ class UserLoginView(APIView):
 
     permission_classes = (permissions.AllowAny,)
 
-    def post(self, request):
+    def post(self, request) -> Response:
         """
 
         :param request: информация о запросе
@@ -59,7 +59,13 @@ class UserLoginView(APIView):
                             status=status.HTTP_400_BAD_REQUEST)
         user = serializer.validated_data['user']
         login(request, user)
-        return Response({"message": "Login successful"}, HTTPStatus.OK)
+        data = UserDataSerializer(user).data
+        return Response(
+            {
+                "message": "Login successful",
+                "user-data": data
+            },
+            HTTPStatus.OK)
 
 
 class UserListView(generics.ListAPIView):
@@ -247,3 +253,27 @@ class GroupViewSet(viewsets.ViewSet):
         group = self.get_object(pk)
         group.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class Logout(APIView):
+    """
+    Осуществление выхода из аккаунта.
+
+    Атрибуты
+    ----------
+    permission_classes:
+        Классы, регулирующие доступ к endpoint.
+    """
+
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request) -> Response:
+        """
+        Выполнение выхода из аккаунта через GET метод.
+
+        :param request: Данные запроса.
+        :return: Response ответ на запрос 200 - при успешном выходе.
+        """
+
+        request.user.auth_token.delete()
+        return Response(status=status.HTTP_200_OK)
