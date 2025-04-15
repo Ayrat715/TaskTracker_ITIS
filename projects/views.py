@@ -1,3 +1,4 @@
+from django.db.models import QuerySet
 from rest_framework import generics, permissions
 
 from .projects_permitions import ProjectPermissions
@@ -42,3 +43,32 @@ class ProjectDetailApiView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Project.objects.all()
     serializer_class = ProjectSerializer
     permission_classes = (permissions.IsAuthenticated, ProjectPermissions)
+
+class UserProjectListViewSet(generics.ListAPIView):
+    """
+    Список проектов авторизованного пользователя.
+
+    Атрибуты
+    ----------
+    model:
+        Экземпляр модели
+    serializer_class:
+        Класс, реализующий сериализацию.
+    permission_classes:
+        Класс, регулирующий доступ к ресурсу.
+    """
+
+    model = Project
+    serializer_class = ProjectSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self) -> QuerySet:
+        """
+        Получение экземпляра проектов по авторизованному пользователю.
+
+        :return: QuerySet список проектов, принадлежащих авторизованному
+        пользователю.
+        """
+
+        user_id = self.request.user.id
+        return Project.objects.filter(group__user=user_id)

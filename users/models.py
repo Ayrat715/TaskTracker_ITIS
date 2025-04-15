@@ -27,4 +27,3 @@ class User(AbstractBaseUser, PermissionsMixin):
     REQUIRED_FIELDS = ['name']
     groups = models.ManyToManyField(Group)
     objects = UserManager()
-
