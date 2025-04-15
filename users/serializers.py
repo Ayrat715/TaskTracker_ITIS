@@ -93,6 +93,14 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'email']
 
 
+class UserDataSerializer(serializers.ModelSerializer):
+    """Информация о пользователе."""
+
+    class Meta:
+        model = User
+        exclude = ['password']
+
+
 class GroupCreateSerializer(serializers.ModelSerializer):
     """
     Работа с данными при создании группы.
