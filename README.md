@@ -246,7 +246,7 @@ API Endpoints
 
 ## Проекты (Projects)
 
-### POST /project/create/ - для создания проекта
+### POST /project/create/ - создание проекта
 
 #### Тело запроса:
 
@@ -258,7 +258,7 @@ API Endpoints
         "group": <number>,
     }
 
-### GET /project/{id}/ - для получения данных проекта
+### GET /project/{id}/ - получение данных проекта
 
 #### Ответ (200 OK):
 
@@ -271,7 +271,15 @@ API Endpoints
         "group": <number>,
     }
 
-### PATCH /project/{id}/ - для изменения данных проекта
+### PATCH /project/{id}/ - изменение данных проекта
+    {
+        "id": <number>,
+        "name": <string>,
+        "description": <string>,
+        "start_time": <string (ISO 8601 datetime)>,
+        "end_time": <string (ISO 8601 datetime)>,
+        "group": <number>
+    }
 
 ### DELETE /project/{id}/ - для удаления проекта
 
@@ -297,27 +305,36 @@ API Endpoints
         "id": <number>,
         "email": <string>
     }
+
 ### GET account/groups/ - список групп
 #### Ответ (200 OK):
 #### users: list - целочисленный список идентификаторов пользователей
+    [
+        {
+            "id": <number>,
+            "name": <string>,
+            "users": [<number>]
+        }
+        ...
+    ]
+
+### POST /account/groups/ - создание группы
+#### Ответ (201 Created):
     {
-        "id": <number>,
-        "name": <string>,
-        "users": [<number>]
+      "name": <string>,
+      "users": [<number>]
     }
 
+### PUT account/groups/{id} - изменение состава пользователей (добавление нового пользователя)
+    {
+      "users": [<number>]
+    }
 
+### DELETE account/groups-detail/{id} - удаление группы
 
-
-### POST account/groups-lis/ - создание группы
-#### Ответ (200 OK):
-#### users: list - целочисленный список идентификаторов пользователей
-
-### PUT account/groups-detail/{pk} - изменение состава пользователей (добавление нового пользователя)
-
-### DELETE account/groups-detail/{pk} - удаление группы
 
 ### DELETE account/groups/{pk}/remove-user/{user_id}/ - удаление пользователя из группы
+
 
 ### GET task/priorities/ - список всех приоритетов
 #### Ответ (200 OK):
