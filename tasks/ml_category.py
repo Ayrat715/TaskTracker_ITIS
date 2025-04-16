@@ -48,7 +48,7 @@ class CategoryClassifier:
         try:
             from sklearn.feature_extraction.text import TfidfVectorizer
             from sklearn.svm import LinearSVC
-            from .models import TaskCategory
+            from tasks.models import TaskCategory
             import os
 
             logger.info("Creating initial dummy model...")

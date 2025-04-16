@@ -4,19 +4,15 @@ from tasks.models import Sprint, Task, SprintTask, Status, Priority
 
 
 class StatusSerializer(serializers.ModelSerializer):
-    display_name = serializers.CharField(source='get_type_display')
-
     class Meta:
         model = Status
-        fields = ['type', 'display_name']
+        fields = ['id', 'type']
 
 class PrioritySerializer(serializers.ModelSerializer):
-    display_name = serializers.CharField(source='get_type_display')
     weight = serializers.IntegerField(source='get_weight')
-
     class Meta:
         model = Priority
-        fields = ['type', 'display_name', 'weight']
+        fields = ['id', 'type', 'weight']
 
 class SprintSerializer(serializers.ModelSerializer):
     class Meta:

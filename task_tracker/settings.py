@@ -34,7 +34,7 @@ ALLOWED_HOSTS = []
 MODELS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'models')
 MIN_SAMPLES = 10
 CONFIDENCE_THRESHOLD = 0.7
-LSTM_TIMESTEPS = 100
+LSTM_TIMESTEPS = 5
 from prometheus_client import Counter, Gauge
 # Application definition
 PREDICTION_ERRORS = Counter('category_errors', 'Prediction errors')

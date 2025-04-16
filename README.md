@@ -289,7 +289,55 @@ API Endpoints
         "non_field_errors": ["End time must occur after start time"]
     }
 
+## Группы(Group)
 
+### GET account/users/?email= - поиск пользователей по почте
+#### Ответ (200 OK):
+    {
+        "id": <number>,
+        "email": <string>
+    }
+### GET account/groups/ - список групп
+#### Ответ (200 OK):
+#### users: list - целочисленный список идентификаторов пользователей
+    {
+        "id": <number>,
+        "name": <string>,
+        "users": [<number>]
+    }
+
+
+
+
+### POST account/groups-lis/ - создание группы
+#### Ответ (200 OK):
+#### users: list - целочисленный список идентификаторов пользователей
+
+### PUT account/groups-detail/{pk} - изменение состава пользователей (добавление нового пользователя)
+
+### DELETE account/groups-detail/{pk} - удаление группы
+
+### DELETE account/groups/{pk}/remove-user/{user_id}/ - удаление пользователя из группы
+
+### GET task/priorities/ - список всех приоритетов
+#### Ответ (200 OK):
+    [
+        {
+            "id": <number>,
+            "type": <string>,
+            "weight": <number>
+        }
+        ...
+    ]
+### GET task/statuses/ - список всех статусов
+#### Ответ (200 OK):
+    [
+        {
+            "id": <number>,
+            "type": <string>
+        }
+        ...
+    ]
 
 ## Дополнительная информация
 ## Статусы задач (Status)

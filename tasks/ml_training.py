@@ -1,7 +1,7 @@
 from tasks.ml_data_preparer import PreparedData
 import logging
 logger = logging.getLogger(__name__)
-
+import torch
 
 def train_model():
     from task_tracker.settings import MIN_SAMPLES, LSTM_TIMESTEPS
@@ -65,41 +65,83 @@ def train_xgb(data: PreparedData):
 
 def train_lstm_prepare(data: PreparedData):
     import numpy as np
-    from sklearn.preprocessing import StandardScaler
     from task_tracker.settings import LSTM_TIMESTEPS
 
     logger.info("Подготовка последовательностей для LSTM...")
 
-    scaler = StandardScaler()
-    scaled_x = scaler.fit_transform(data.x)
-    sequences = []
+    if data is None or not hasattr(data, 'x') or not hasattr(data, 'y'):
+        logger.error("Неверный формат данных: отсутствуют x или y.")
+        return np.array([]), np.array([])
 
-    for i in range(len(scaled_x) - LSTM_TIMESTEPS):
-        sequences.append(scaled_x[i:i + LSTM_TIMESTEPS])
+    x_raw = data.x
+    y_raw = data.y
+
+    logger.debug(f"Размерности: x = {x_raw.shape}, y = {len(y_raw)}, TIMESTEPS = {LSTM_TIMESTEPS}")
+
+    if len(x_raw) <= LSTM_TIMESTEPS:
+        logger.warning(f"Недостаточно примеров для формирования хотя бы одной последовательности LSTM (нужно > {LSTM_TIMESTEPS})")
+        return np.array([]), np.array([])
+
+    sequences = []
+    targets = []
+
+    for i in range(len(x_raw) - LSTM_TIMESTEPS):
+        x_seq = x_raw[i:i + LSTM_TIMESTEPS]
+        y_target = y_raw[i + LSTM_TIMESTEPS] if i + LSTM_TIMESTEPS < len(y_raw) else None
+
+        if y_target is None:
+            logger.warning(f"Нет y для последовательности, i={i}")
+            continue
+
+        sequences.append(x_seq)
+        targets.append(y_target)
 
     x_seq = np.array(sequences)
-    y_seq = np.array(data.y[LSTM_TIMESTEPS:])
+    y_seq = np.array(targets)
 
-    logger.debug(f"LSTM последовательностей подготовлено: {len(x_seq)}")
+    logger.debug(f"LSTM: подготовлено {len(x_seq)} последовательностей и {len(y_seq)} таргетов")
     return x_seq, y_seq
 
 
+class LSTMModel(torch.nn.Module):
+    def __init__(self, input_size, hidden_size):
+        super().__init__()
+        self.lstm = torch.nn.LSTM(input_size, hidden_size, batch_first=True)
+        self.linear = torch.nn.Linear(hidden_size, 1)
+
+    def forward(self, x):
+        out, _ = self.lstm(x)
+        return self.linear(out[:, -1, :])
+
 def train_lstm(x_seq, y_seq):
-    from keras import Sequential
-    from keras.src.callbacks import EarlyStopping
-    from keras.src.layers import Dense
-    from keras.src.optimizers import Adam
-    from keras.src.layers import LSTM
+    import torch
+    import torch.nn as nn
+    import torch.optim as optim
+    from torch.utils.data import DataLoader, TensorDataset
+    logger.info("Обучение LSTM модели с PyTorch...")
 
-    logger.info("Обучение LSTM модели...")
+    X_tensor = torch.FloatTensor(x_seq)
+    y_tensor = torch.FloatTensor(y_seq).view(-1, 1)
 
-    model = Sequential([
-        LSTM(64, input_shape=(x_seq.shape[1], x_seq.shape[2])),
-        Dense(1)
-    ])
-    model.compile(optimizer=Adam(0.001), loss='mse')
-    model.fit(x_seq, y_seq, epochs=50, batch_size=32,
-              callbacks=[EarlyStopping(patience=5)])
+    dataset = TensorDataset(X_tensor, y_tensor)
+    loader = DataLoader(dataset, batch_size=32, shuffle=True)
+
+    model = LSTMModel(input_size=x_seq.shape[2], hidden_size=64)
+    criterion = nn.MSELoss()
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+    model.train()
+    for epoch in range(50):
+        epoch_loss = None
+        for batch_x, batch_y in loader:
+            optimizer.zero_grad()
+            outputs = model(batch_x)
+            loss = criterion(outputs, batch_y)
+            loss.backward()
+            optimizer.step()
+            epoch_loss = loss.item()
+        if epoch % 10 == 0 and epoch_loss is not None:
+            logger.info(f'Epoch {epoch}, Loss: {epoch_loss:.4f}')
 
     logger.info("LSTM обучение завершено.")
     return model, {'lstm_status': 'trained'}
@@ -120,7 +162,7 @@ def save_models(xgb_model, lstm_model, preprocessor):
     joblib.dump(preprocessor, f'{MODELS_DIR}/preprocessor.pkl')
 
     if lstm_model:
-        lstm_model.save(f'{MODELS_DIR}/lstm_model.h5')
+        torch.save(lstm_model.state_dict(), f'{MODELS_DIR}/lstm_model.pth')
 
     logger.info("Модели успешно сохранены.")
 
