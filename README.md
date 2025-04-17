@@ -115,16 +115,16 @@ API Endpoints
             "id": <number>,
             "name": <string>,
             "description": <string>,
-            "status": <number>,
-            "executor": <number>,
-            "sprint": [<number>], 
             "given_time": <string (ISO 8601 datetime)>,
             "start_time": <string (ISO 8601 datetime)>,
             "end_time": <string (ISO 8601 datetime)>,
+            "predicted_duration": <number>,
+            "status": <number>,
+            "author": <number>,
             "priority": <number>,
-            "category": <number>,
-            "nlp_metadata": JSON
+            "executors": [<number>]
         }
+        ...
     ]
 
 ### POST task/tasks/ - Создать новую задачу
@@ -132,19 +132,17 @@ API Endpoints
 #### Тело запроса:
 
     {
+        "executor_ids": [<number>],
+        "sprint_ids": [<number>],
         "name": <string>,
         "description": <string>,
-        "status": <number>,
-        "executor": <number>,
-        "sprint": [<number>], 
         "given_time": <string (ISO 8601 datetime)>,
         "start_time": <string (ISO 8601 datetime)>,
         "end_time": <string (ISO 8601 datetime)>,
-        "priority": <number>,
-        "category": <number>,
-        "nlp_metadata": JSON
+        "status": <number>,
+        "author": <number>,
+        "priority": <number>
     }
-
 
 ### GET task/tasks/{id}/ - Получить детали задачи
 
@@ -152,17 +150,16 @@ API Endpoints
 
     {
         "id": <number>,
+        "executor_ids": [<number>],
+        "sprint_ids": [<number>],
         "name": <string>,
         "description": <string>,
-        "status": <number>,
-        "executor": <number>,
-        "sprint": [<number>], 
         "given_time": <string (ISO 8601 datetime)>,
         "start_time": <string (ISO 8601 datetime)>,
         "end_time": <string (ISO 8601 datetime)>,
-        "priority": <number>,
-        "category": <number>,
-        "nlp_metadata": JSON
+        "status": <number>,
+        "author": <number>,
+        "priority": <number>
     }
 
 ### PUT task/tasks/{id}/ - Обновить задачу
@@ -170,18 +167,16 @@ API Endpoints
 #### Ответ (200 OK):
 
     {
-        "id": <number>,
+        "executor_ids": [<number>],
+        "sprint_ids": [<number>],
         "name": <string>,
         "description": <string>,
-        "status": <number>,
-        "executor": <number>,
-        "sprint": [<number>], 
         "given_time": <string (ISO 8601 datetime)>,
         "start_time": <string (ISO 8601 datetime)>,
         "end_time": <string (ISO 8601 datetime)>,
-        "priority": <number>,
-        "category": <number>,
-        "nlp_metadata": JSON
+        "status": <number>,
+        "author": <number>,
+        "priority": <number>
     }
 
 ### PATCH task/tasks/{id}/ - Частично обновить задачу

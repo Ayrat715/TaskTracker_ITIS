@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from projects.models import Employee
-from tasks.models import Sprint, Task, SprintTask, Status, Priority
+from tasks.models import Sprint, Task, SprintTask, Status, Priority, Executor
 
 
 class StatusSerializer(serializers.ModelSerializer):
@@ -36,13 +36,13 @@ class SprintSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
-# TODO: изменить executor_id
 class TaskSerializer(serializers.ModelSerializer):
-    executor_id = serializers.PrimaryKeyRelatedField(
-        source='executor',
-        queryset=Employee.objects.all(),
+    executor_ids = serializers.ListField(
+        child=serializers.IntegerField(),
         write_only=True,
-        required=False
+        required=False,
+        allow_empty=True,
+        max_length=5
     )
     sprint_ids = serializers.ListField(
         child=serializers.IntegerField(),
@@ -63,6 +63,14 @@ class TaskSerializer(serializers.ModelSerializer):
         representation = super().to_representation(instance)
         representation.pop('category', None)
         representation.pop('nlp_metadata', None)
+
+        representation['executors'] = [
+            {
+                'id': ex.employee.id,
+                'name': ex.employee.user.name
+            }
+            for ex in instance.executor_set.select_related('employee__user')
+        ]
         return representation
 
     def validate(self, data):
@@ -75,9 +83,12 @@ class TaskSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'non_field_errors': ["End time must be after start time."]})
 
         sprint_ids = data.get('sprint_ids', [])
-        executor = data.get('executor', None)
+        executor_ids = data.get('executor_ids', [])
 
-        if sprint_ids and executor:
+        if len(set(executor_ids)) > 5:
+            raise serializers.ValidationError({'executor_ids': ["No more than 5 executors are allowed."]})
+
+        if sprint_ids and executor_ids:
             sprints = Sprint.objects.filter(id__in=sprint_ids)
             projects = set(sprint.project_id for sprint in sprints)
 
@@ -85,42 +96,58 @@ class TaskSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({'sprint_ids': ["All sprints must belong to the same project."]})
 
             project_id = next(iter(projects))
-            if executor.project_id != project_id:
-                raise serializers.ValidationError({'executor_id': ["Executor does not belong to the project's team."]})
+            employees = Employee.objects.filter(id__in=executor_ids)
+            for emp in employees:
+                if emp.project_id != project_id:
+                    raise serializers.ValidationError({'executor_ids': [f"Employee {emp.id} does not belong to the project."]})
 
         return data
 
     def create(self, validated_data):
         sprint_ids = validated_data.pop('sprint_ids', [])
+        executor_ids = validated_data.pop('executor_ids', [])
+
         sprints = Sprint.objects.filter(id__in=sprint_ids)
         if len(sprints) != len(sprint_ids):
             raise serializers.ValidationError({"sprint_ids": ["Some sprints do not exist."]})
 
-        executor = validated_data.pop('executor', None)
+        executors = Employee.objects.filter(id__in=executor_ids)
+        if len(executors) != len(executor_ids):
+            raise serializers.ValidationError({"executor_ids": ["Some executors do not exist."]})
+
         task = Task.objects.create(**validated_data)
-        if executor:
-            task.executor = executor
-            task.save()
+
+        for emp in executors:
+            Executor.objects.create(task=task, employee=emp)
+
         for sprint in sprints:
             SprintTask.objects.create(sprint=sprint, task=task)
+
         return task
 
     def update(self, instance, validated_data):
-        if 'start_time' in validated_data:
-            validated_data.pop('start_time')
+        validated_data.pop('start_time', None)
+
         sprint_ids = validated_data.pop('sprint_ids', None)
-        executor = validated_data.pop('executor', None)
+        executor_ids = validated_data.pop('executor_ids', None)
+
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-        if executor:
-            instance.executor = executor
         instance.save()
+
+        if executor_ids is not None:
+            Executor.objects.filter(task=instance).delete()
+            executors = Employee.objects.filter(id__in=executor_ids)
+            for emp in executors:
+                Executor.objects.create(task=instance, employee=emp)
+
         if sprint_ids is not None:
             SprintTask.objects.filter(task=instance).delete()
             for sprint_id in sprint_ids:
                 sprint = Sprint.objects.filter(id=sprint_id).first()
                 if sprint:
                     SprintTask.objects.create(sprint=sprint, task=instance)
+
         instance.tracker.changed()
         return instance
 
