@@ -63,14 +63,8 @@ class TaskSerializer(serializers.ModelSerializer):
         representation = super().to_representation(instance)
         representation.pop('category', None)
         representation.pop('nlp_metadata', None)
-
-        representation['executors'] = [
-            {
-                'id': ex.employee.id,
-                'name': ex.employee.user.name
-            }
-            for ex in instance.executor_set.select_related('employee__user')
-        ]
+        representation['executors'] = list(instance.executor_set.values_list('employee_id', flat=True))
+        representation['sprints'] = list(instance.sprinttask_set.values_list('sprint_id', flat=True))
         return representation
 
     def validate(self, data):

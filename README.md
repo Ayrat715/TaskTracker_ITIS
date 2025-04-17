@@ -122,7 +122,8 @@ API Endpoints
             "status": <number>,
             "author": <number>,
             "priority": <number>,
-            "executors": [<number>]
+            "executors": [<number>],
+            "sprints": [<number>]
         }
         ...
     ]
@@ -133,7 +134,7 @@ API Endpoints
 
     {
         "executor_ids": [<number>],
-        "sprint_ids": [<number>],
+        "sprint": [<number>],
         "name": <string>,
         "description": <string>,
         "given_time": <string (ISO 8601 datetime)>,
@@ -159,7 +160,8 @@ API Endpoints
         "end_time": <string (ISO 8601 datetime)>,
         "status": <number>,
         "author": <number>,
-        "priority": <number>
+        "priority": <number>,
+        "sprints": [<number>]
     }
 
 ### PUT task/tasks/{id}/ - Обновить задачу
