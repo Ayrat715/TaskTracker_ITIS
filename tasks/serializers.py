@@ -36,7 +36,7 @@ class SprintSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
-
+# TODO: изменить executor_id
 class TaskSerializer(serializers.ModelSerializer):
     executor_id = serializers.PrimaryKeyRelatedField(
         source='executor',

@@ -57,7 +57,7 @@ class TaskViewSet(viewsets.ModelViewSet):
             if len(sprints) != len(sprint_ids):
                 return Response({"sprint": ["Some sprints do not exist."]},
                                 status=status.HTTP_400_BAD_REQUEST)
-            employee_id = request.data.get('executor_id')  # Исправлено с 'executor' на 'executor_id'
+            employee_id = request.data.get('executor_id')
             if not employee_id:
                 return Response({"executor_id": ["This field is required."]}, status=400)
             executor = get_object_or_404(Employee, id=employee_id)
@@ -88,7 +88,7 @@ class TaskViewSet(viewsets.ModelViewSet):
             sprints = Sprint.objects.filter(id__in=sprint_ids)
             if len(sprints) != len(sprint_ids):
                 return Response({"sprint": ["Some sprints do not exist."]}, status=400)
-            if 'executor_id' in request.data:  # Исправлено с 'executor' на 'executor_id'
+            if 'executor_id' in request.data:
                 executor = get_object_or_404(Employee, id=request.data['executor_id'])
                 project_ids = sprints.values_list('project_id', flat=True)
                 if executor.project_id not in project_ids:

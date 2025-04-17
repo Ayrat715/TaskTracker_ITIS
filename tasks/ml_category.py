@@ -2,7 +2,6 @@ import logging
 from django.conf import settings
 from django.db import transaction
 from celery import shared_task
-
 from task_tracker.settings import MODELS_DIR, PREDICTION_CONFIDENCE, PREDICTION_ERRORS
 from .text_processing import preprocess, nlp_ru
 
@@ -13,10 +12,12 @@ DEFAULT_CATEGORY = 'Другое'
 KEYWORD_UPDATE_INTERVAL = getattr(settings, 'KEYWORD_UPDATE_INTERVAL', 3600)
 
 
+# Метод по умолчанию, если не удаётся определить категорию
 def _fallback_method(text):
     return DEFAULT_CATEGORY
 
 
+# Классификатор категорий
 class CategoryClassifier:
 
     def __init__(self):
@@ -28,8 +29,8 @@ class CategoryClassifier:
         self.is_trained = False
         self.keyword_categories = []
         self.last_keyword_update = None
-        self.refresh_keywords()
-        self.initialize_model()
+        self.refresh_keywords()  # Загружаем ключевые слова категорий
+        self.initialize_model()  # Загружаем/создаём модель
 
     def _verify_dependencies(self):
         if not hasattr(nlp_ru, 'pipe'):
@@ -37,11 +38,11 @@ class CategoryClassifier:
 
     def initialize_model(self):
         try:
-            self.load_models()
+            self.load_models()  # Пытаемся загрузить обученные модели
             self.is_trained = True
         except Exception as e:
             logger.warning(f"Models not found, initializing default: {e}")
-            self.create_initial_model()
+            self.create_initial_model()  # Создаём начальную модель
             self.is_trained = False
 
     def create_initial_model(self):
@@ -53,11 +54,13 @@ class CategoryClassifier:
 
             logger.info("Creating initial dummy model...")
 
+            # Создаём категорию по умолчанию, если её нет
             TaskCategory.objects.get_or_create(
                 name=DEFAULT_CATEGORY,
                 defaults={'description': 'Категория по умолчанию'}
             )
 
+            # Используем другие категории, если они есть
             categories = TaskCategory.objects.exclude(name=DEFAULT_CATEGORY)
             if not categories.exists():
                 logger.info("Only default category exists, skipping model creation.")
@@ -69,6 +72,8 @@ class CategoryClassifier:
             os.makedirs(MODELS_DIR, exist_ok=True)
             texts = [f"Пример задачи для категории {cat.name}" for cat in all_categories]
             labels = [cat.name for cat in all_categories]
+
+            # Векторизация и обучение начальной модели
             vectorizer = TfidfVectorizer()
             X = vectorizer.fit_transform(texts)
             model = LinearSVC()
@@ -87,6 +92,7 @@ class CategoryClassifier:
         except Exception as e:
             logger.exception(f"Failed to create initial model: {e}")
 
+    # Обновление списка ключевых слов категорий
     def refresh_keywords(self):
         from django.utils import timezone
         from tasks.models import TaskCategory
@@ -98,17 +104,21 @@ class CategoryClassifier:
         )
         self.last_keyword_update = timezone.now()
 
+    # Загрузка модели и артефактов
     def load_models(self):
         import os
         import joblib
         from gensim.models import Word2Vec
-        from task_tracker.settings import MODELS_DIR
 
-        model_path = os.path.join(MODELS_DIR, 'model.pkl')
-        if not os.path.exists(model_path):
-            raise FileNotFoundError("Model files not found")
+        required_files = ['model.pkl', 'vectorizer.pkl', 'classes.pkl']
+        for fname in required_files:
+            path = os.path.join(MODELS_DIR, fname)
+            if not os.path.exists(path):
+                raise FileNotFoundError(f"Missing model file: {fname}")
 
-        self.model = joblib.load(model_path)
+        logger.info(f"Loading models from: {MODELS_DIR}")
+
+        self.model = joblib.load(os.path.join(MODELS_DIR, 'model.pkl'))
         self.vectorizer = joblib.load(os.path.join(MODELS_DIR, 'vectorizer.pkl'))
         self.classes = joblib.load(os.path.join(MODELS_DIR, 'classes.pkl'))
 
@@ -117,17 +127,18 @@ class CategoryClassifier:
             self.w2v_model = Word2Vec.load(w2v_path)
             self.w2v_model.init_sims(replace=True)
 
+    # Сохранение обученной модели и вспомогательных объектов
     def save_artifacts(self, **artifacts):
         import os
         import shutil
         import joblib
         from django.utils import timezone
         from django.core.management import call_command
-        from task_tracker.settings import MODELS_DIR
 
         version = artifacts.get('version', timezone.now().strftime("%Y%m%d%H%M%S"))
-        call_command('clean_old_models')
+        call_command('clean_old_models')  # Удаление старых моделей
 
+        # Сохраняем файлы
         joblib.dump(artifacts['model'], os.path.join(MODELS_DIR, f'model_{version}.pkl'))
         joblib.dump(artifacts['vectorizer'], os.path.join(MODELS_DIR, f'vectorizer_{version}.pkl'))
         joblib.dump(artifacts['classes'], os.path.join(MODELS_DIR, f'classes_{version}.pkl'))
@@ -135,6 +146,7 @@ class CategoryClassifier:
         if artifacts['w2v_model']:
             artifacts['w2v_model'].save(os.path.join(MODELS_DIR, f'w2v_{version}.model'))
 
+        # Обновляем симлинки на актуальные модели
         for name in ['model', 'vectorizer', 'classes']:
             src = os.path.join(MODELS_DIR, f'{name}_{version}.pkl')
             dst = os.path.join(MODELS_DIR, f'{name}.pkl')
@@ -145,6 +157,7 @@ class CategoryClassifier:
             except OSError:
                 shutil.copyfile(src, dst)
 
+    # Получение векторного представления текста из Word2Vec
     def _get_w2v_features(self, text):
         import numpy as np
         if not self.w2v_model:
@@ -154,10 +167,12 @@ class CategoryClassifier:
             return np.mean(vectors, axis=0).reshape(1, -1)
         return np.zeros((1, self.w2v_model.vector_size))
 
+    # Предсказание категории по тексту
     def predict_category(self, text):
         import numpy as np
         from django.utils import timezone
         from django.core.cache import cache
+
         cache_key = f'category:{hash(text)}'
         if cached := cache.get(cache_key):
             return cached
@@ -166,9 +181,11 @@ class CategoryClassifier:
             processed_text = preprocess(text)
             processed_lemmas = set(processed_text.split())
 
+            # Обновление ключевых слов по таймеру
             if (timezone.now() - self.last_keyword_update).total_seconds() > KEYWORD_UPDATE_INTERVAL:
                 self.refresh_keywords()
 
+            # Пытаемся сопоставить по ключевым словам
             best_match = None
             max_matches = 0
 
@@ -189,6 +206,7 @@ class CategoryClassifier:
                 cache.set(cache_key, best_match, timeout=300)
                 return best_match
 
+            # Классификация через модель
             if len(self.classes) == 1 and self.classes[0] == DEFAULT_CATEGORY:
                 return DEFAULT_CATEGORY
             X = self.vectorizer.transform([processed_text])
@@ -206,6 +224,7 @@ class CategoryClassifier:
             return _fallback_method(text)
 
 
+# Присваивание категории задаче
 @shared_task
 def assign_category(task_id):
     from filelock import FileLock
@@ -214,13 +233,13 @@ def assign_category(task_id):
     task = Task.objects.get(id=task_id)
     classifier = CategoryClassifier()
 
-    with FileLock("model_update.lock"):
+    with FileLock("model_update.lock"):  # Блокировка, чтобы избежать одновременного обновления модели
         category = classifier.predict_category(task.description)
         task.category = category
         task.save(update_fields=["category"])
 
 
-
+# Переобучение модели
 @shared_task
 @transaction.atomic
 def retrain_classifier():
@@ -233,17 +252,22 @@ def retrain_classifier():
     from sklearn.utils import compute_class_weight
     import numpy as np
     from .models import Task
+
     tasks = Task.objects.filter(category__isnull=False)
+    logger.info(f"Training data: {[(t.id, t.category.name) for t in tasks]}")
+
     if tasks.count() < MIN_SAMPLES:
         logger.info(f"Not enough samples ({tasks.count()}), using default model")
         return
 
+    # Подготовка данных
     texts = [preprocess(f"{t.name} {t.description}") for t in tasks]
     labels = [t.category.name for t in tasks]
 
     vectorizer = TfidfVectorizer(max_features=5000, ngram_range=(1, 2))
     x_tfidf = vectorizer.fit_transform(texts)
 
+    # Обучение Word2Vec при наличии достаточного количества данных
     w2v_model = None
     if len(texts) >= 100:
         sentences = [text.split() for text in texts]
@@ -256,6 +280,7 @@ def retrain_classifier():
             epochs=10
         )
 
+    # Комбинирование признаков
     X = x_tfidf.toarray()
     if w2v_model:
         x_w2v = np.array([
@@ -263,9 +288,10 @@ def retrain_classifier():
                     or [np.zeros(100)], axis=0)
             for text in texts
         ])
-        x = np.hstack([X, x_w2v])
+        X = np.hstack([X, x_w2v])
 
     try:
+        # Взвешивание классов
         class_weights = compute_class_weight(
             'balanced',
             classes=np.unique(labels),
@@ -279,10 +305,8 @@ def retrain_classifier():
             dual=False
         )
 
-        if X.shape[0] > 1000:
-            test_size = 0.2
-        else:
-            test_size = 0.1
+        # Разделение на тренировочную и тестовую выборку
+        test_size = 0.2 if X.shape[0] > 1000 else 0.1
 
         x_train, x_test, y_train, y_test = train_test_split(
             X, labels,
@@ -292,6 +316,7 @@ def retrain_classifier():
 
         model.fit(x_train, y_train)
 
+        # Сохраняем новую модель
         classifier = CategoryClassifier()
         classifier.save_artifacts(
             model=model,

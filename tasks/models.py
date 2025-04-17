@@ -14,6 +14,7 @@ class TaskCategory(models.Model):
         с использованием NLP-анализа при создании задач.
         Примеры: 'Разработка', 'Тестирование', 'Документация'
     """
+    # Отслеживание изменений определённых полей
     tracker = FieldTracker(fields=['keywords', 'auto_assign', 'min_confidence'])
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
@@ -29,14 +30,24 @@ class TaskCategory(models.Model):
 
     def save(self, *args, **kwargs):
         if self.keywords:
-            processed = [
-                preprocess(kw.strip())
-                for kw in self.keywords.split(',')
-                if kw.strip()
-            ]
+            print(f"Processing keywords: {self.keywords}")
+            processed = []
+            for kw in self.keywords.split(','):
+                cleaned_kw = kw.strip()
+                if cleaned_kw:
+                    try:
+                        # Обработка ключевого слова (лемматизация, нормализация и т.п.)
+                        processed_kw = preprocess(cleaned_kw)
+                        processed.append(processed_kw)
+                    except Exception as e:
+                        print(f"Error processing '{cleaned_kw}': {str(e)}")
+                        continue  # Пропуск некорректные ключи
             self.processed_keywords = ','.join(processed)
+            print(f"Processed keywords: {self.processed_keywords}")
         super().save(*args, **kwargs)
+    # Определяет, нужно ли автоматически присваивать категорию при создании задачи
     auto_assign = models.BooleanField(default=False)
+    # Минимальная уверенность для автоматической классификации
     min_confidence = models.FloatField(default=0.7)
 
 
@@ -124,22 +135,35 @@ class Task(models.Model):
         help_text="Сохраненные результаты NLP анализа (ключевые слова, срочность и т.д.)"
     )
 
+    # Формирует входные признаки (features) для моделей машинного обучения, исключая время
     def _prepare_prediction_input(self):
         features = extract_task_features(self)
-        return features[:-1]
+        return features[:-1] # Без времени старта
 
+    # Предсказание длительности задачи с помощью XGBoost или LSTM
     def predict_duration(self):
         """Возвращает предсказанное время в часах и сохраняет в поле"""
         from tasks.ml_utils import should_use_xgb
         from tasks.ml_load_model import load_models
+        import joblib
+        from django.conf import settings
+        import os
 
         try:
-            xgb_model, lstm_model, preprocessor = load_models()
+            models = load_models()
+            xgb_model = models.get('xgb')
+            lstm_model = models.get('lstm')
+
+            # Загрузка препроцессора
+            preprocessor_path = os.path.join(settings.MODELS_DIR, 'preprocessor.pkl')
+            preprocessor = joblib.load(preprocessor_path) if os.path.exists(preprocessor_path) else None
 
             if xgb_model is None or preprocessor is None:
-                logger.error("Модели не загружены")
+                logger.error("Модели или препроцессор не загружены")
                 return None
+
             if should_use_xgb(self.status.type):
+                # XGBoost модель
                 input_data = self._prepare_prediction_input()
                 processed_input = preprocessor.transform([input_data])
                 seconds = xgb_model.predict(processed_input)[0]
@@ -148,6 +172,7 @@ class Task(models.Model):
                 if lstm_input is None:
                     return None
                 seconds = lstm_model.predict(lstm_input)[0][0]
+            # Переводим секунды в часы, округляем
             hours = round(seconds / 3600, 1)
             self.predicted_duration = hours
             self.save(update_fields=['predicted_duration'])
@@ -158,6 +183,7 @@ class Task(models.Model):
             return None
 
     def _prepare_lstm_input(self):
+        # Получаем завершённые задачи
         completed_tasks = Task.objects.filter(
             status__type='completed',
             start_time__isnull=False
@@ -166,7 +192,7 @@ class Task(models.Model):
         if not completed_tasks.exists():
             logger.warning("Нет завершенных задач для LSTM")
             return None
-
+        # Время первой задачи — базовая точка отсчёта
         base_time = completed_tasks.first().start_time
         features = extract_task_features(self, base_time)
         return [[features]]
