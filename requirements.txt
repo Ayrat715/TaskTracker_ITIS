@@ -45,5 +45,5 @@ django-model-utils~=5.0.0
 django-email-users~=2.1.0
 django-redis==5.4.0
 scipy >= 1.10
-ru-core-news-sm==3.7.0
-en-core-web-sm==3.7.1
+en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1.tar.gz
+ru-core-news-sm @ https://github.com/explosion/spacy-models/releases/download/ru_core_news_sm-3.7.0/ru_core_news_sm-3.7.0.tar.gz
