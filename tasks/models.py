@@ -7,6 +7,7 @@ from tasks.ml_utils import extract_task_features
 from users.models import User
 import logging
 logger = logging.getLogger(__name__)
+from django.db import transaction
 
 class TaskCategory(models.Model):
     """ Категории для классификации задач по темам или типам работ.
@@ -104,7 +105,15 @@ class Sprint(models.Model):
 
 
 class Task(models.Model):
+    task_number = models.PositiveIntegerField(editable=False, null=True)
     tracker = FieldTracker(fields=['name', 'description'])
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['task_number'],
+                name='unique_project_task_number'
+            )
+        ]
     def clean(self):
         if self.start_time >= self.end_time:
             raise ValidationError("The start date of the task must be earlier than the end date.")
@@ -178,6 +187,27 @@ class Task(models.Model):
         except Exception as e:
             logger.error(f"Ошибка предсказания: {str(e)}")
             return None
+
+    def save(self, *args, **kwargs):
+        if not self.pk and not self.task_number:
+            last_sprint = Sprint.objects.filter(
+                sprinttask__task=self
+            ).order_by('-start_date').first()
+
+            if not last_sprint:
+                raise ValueError("Task must be linked to a sprint.")
+
+            project = last_sprint.project
+
+            related_tasks = Task.objects.filter(
+                sprinttask__sprint__project=project
+            ).select_for_update().order_by('-task_number')
+
+            with transaction.atomic():
+                last_task = related_tasks.first()
+                self.task_number = last_task.task_number + 1 if last_task else 1
+
+        super().save(*args, **kwargs)
 
     def _prepare_lstm_input(self):
         # Получаем завершённые задачи
