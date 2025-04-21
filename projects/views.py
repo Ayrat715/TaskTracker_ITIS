@@ -3,8 +3,8 @@ from rest_framework import generics, permissions
 
 from .projects_permitions import ProjectPermissions
 
-from projects.models import Project
-from projects.serializers import ProjectSerializer
+from projects.models import Project, Employee
+from projects.serializers import ProjectSerializer, EmployeeSerializer
 
 
 class ProjectCreateApiView(generics.CreateAPIView):
@@ -72,3 +72,10 @@ class UserProjectListViewSet(generics.ListAPIView):
 
         user_id = self.request.user.id
         return Project.objects.filter(group__user=user_id)
+
+
+class ProjectEmployeesView(generics.ListAPIView):
+    serializer_class = EmployeeSerializer
+    def get_queryset(self):
+        project_id = self.kwargs.get('project_id')
+        return Employee.objects.filter(project_id=project_id)

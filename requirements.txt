@@ -22,7 +22,6 @@ spacy==3.7.4
 gensim == 4.3.3
 pymorphy2
 torch==2.5.0
-xgboost==2.0.3
 prometheus_client
 langdetect
 psycopg2~=2.9.10
@@ -45,5 +44,6 @@ django-model-utils~=5.0.0
 django-email-users~=2.1.0
 django-redis==5.4.0
 scipy >= 1.10
+catboost
 en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1.tar.gz
 ru-core-news-sm @ https://github.com/explosion/spacy-models/releases/download/ru_core_news_sm-3.7.0/ru_core_news_sm-3.7.0.tar.gz

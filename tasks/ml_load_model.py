@@ -5,12 +5,13 @@ import joblib
 logger = logging.getLogger(__name__)
 
 REQUIRED_MODELS = {
-    'xgb': ('xgb_model.pkl', joblib.load),
+    'catboost': ('catboost_model.pkl', joblib.load),
     'lstm': (
         'lstm_model.pth',
         lambda path: load_lstm_model(path)
     )
 }
+
 
 def load_models():
     from tasks.ml_training import train_model

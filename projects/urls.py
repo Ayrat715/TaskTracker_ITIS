@@ -1,7 +1,7 @@
 from django.urls import path
 
 from projects.views import ProjectCreateApiView, ProjectDetailApiView, \
-    UserProjectListViewSet
+    UserProjectListViewSet, ProjectEmployeesView
 
 app_name = "projects"
 
@@ -13,4 +13,5 @@ urlpatterns = [
         name='user-projects'
     ),
     path('<int:pk>/', ProjectDetailApiView.as_view(), name='detail'),
+    path('<int:project_id>/employees/', ProjectEmployeesView.as_view(), name='project-employees'),
 ]
