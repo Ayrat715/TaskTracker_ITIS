@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from .models import Project, Employee
-from users.models import Group, User
+from users.models import Group
 
 
 class ProjectSerializer(serializers.ModelSerializer):
@@ -41,3 +41,8 @@ class EmployeeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employee
         fields = ['id', 'name']
+
+class EmployeeIdSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Employee
+        fields = ['id']

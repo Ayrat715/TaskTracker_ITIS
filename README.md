@@ -241,6 +241,13 @@ API Endpoints
         "email": ["Email or password is incorrect"]
     }
 
+### GET /project/my-employee-ids/ - получение всех id employee, которыми является данный user
+#### Ответ (200 OK):
+
+    {
+        "id": [<number>]
+    }
+
 ## Проекты (Projects)
 
 ### POST /project/create/ - создание проекта

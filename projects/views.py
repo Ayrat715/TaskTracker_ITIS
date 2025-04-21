@@ -1,10 +1,9 @@
 from django.db.models import QuerySet
 from rest_framework import generics, permissions
-
+from rest_framework.response import Response
 from .projects_permitions import ProjectPermissions
-
 from projects.models import Project, Employee
-from projects.serializers import ProjectSerializer, EmployeeSerializer
+from projects.serializers import ProjectSerializer, EmployeeSerializer, EmployeeIdSerializer
 
 
 class ProjectCreateApiView(generics.CreateAPIView):
@@ -79,3 +78,21 @@ class ProjectEmployeesView(generics.ListAPIView):
     def get_queryset(self):
         project_id = self.kwargs.get('project_id')
         return Employee.objects.filter(project_id=project_id)
+
+
+class MyEmployeeIdView(generics.ListAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = EmployeeIdSerializer
+
+    def get_queryset(self):
+        # Возвращаем только ID сотрудников текущего пользователя
+        return Employee.objects.filter(user=self.request.user)
+
+    def list(self, request, *args, **kwargs):
+        # Получаем queryset, как обычно
+        queryset = self.get_queryset()
+        # Создаем список ID сотрудников текущего пользователя
+        employee_ids = list(queryset.values_list('id', flat=True))
+        # Формируем ответ в нужном формате
+        return Response({"id": employee_ids})
+
