@@ -244,9 +244,13 @@ API Endpoints
 ### GET /project/my-employee-ids/ - получение всех id employee, которыми является данный user
 #### Ответ (200 OK):
 
-    {
-        "id": [<number>]
-    }
+    [
+        {
+            "id": <number>,
+            "project_id": <number>
+        }
+        ...
+    ]
 
 ## Проекты (Projects)
 

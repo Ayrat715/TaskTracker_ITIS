@@ -85,14 +85,6 @@ class MyEmployeeIdView(generics.ListAPIView):
     serializer_class = EmployeeIdSerializer
 
     def get_queryset(self):
-        # Возвращаем только ID сотрудников текущего пользователя
+        # Возвращаем сотрудников текущего пользователя
         return Employee.objects.filter(user=self.request.user)
-
-    def list(self, request, *args, **kwargs):
-        # Получаем queryset, как обычно
-        queryset = self.get_queryset()
-        # Создаем список ID сотрудников текущего пользователя
-        employee_ids = list(queryset.values_list('id', flat=True))
-        # Формируем ответ в нужном формате
-        return Response({"id": employee_ids})
 
