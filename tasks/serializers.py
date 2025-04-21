@@ -1,8 +1,7 @@
-
 from rest_framework import serializers
 from projects.models import Employee
-from tasks.models import Sprint, Task, SprintTask, Status, Priority, Executor
-
+from tasks.models import Sprint, Task, Status, Priority, Executor, assign_task_number
+from tasks.models import SprintTask
 
 class StatusSerializer(serializers.ModelSerializer):
     class Meta:
@@ -123,7 +122,8 @@ class TaskSerializer(serializers.ModelSerializer):
             SprintTask.objects.bulk_create([
                 SprintTask(task=task, sprint=sprint) for sprint in sprints
             ])
-
+        task.refresh_from_db()
+        assign_task_number(task)
         return task
 
     def update(self, instance, validated_data):
@@ -153,5 +153,3 @@ class TaskSerializer(serializers.ModelSerializer):
                 ])
 
         return task
-
-
