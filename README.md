@@ -113,6 +113,7 @@ API Endpoints
     [
         {
             "id": <number>,
+            "task_number": <number>,
             "name": <string>,
             "description": <string>,
             "given_time": <string (ISO 8601 datetime)>,
@@ -151,6 +152,7 @@ API Endpoints
 
     {
         "id": <number>,
+        "task_number": <number>,
         "executor_ids": [<number>],
         "sprint_ids": [<number>],
         "name": <string>,

@@ -7,7 +7,6 @@ from tasks.ml_utils import extract_task_features
 from users.models import User
 import logging
 logger = logging.getLogger(__name__)
-from django.db import transaction
 
 class TaskCategory(models.Model):
     """ Категории для классификации задач по темам или типам работ.
@@ -105,15 +104,8 @@ class Sprint(models.Model):
 
 
 class Task(models.Model):
-    task_number = models.PositiveIntegerField(editable=False, null=True)
+    task_number = models.IntegerField(blank=True, null=True)
     tracker = FieldTracker(fields=['name', 'description'])
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=['task_number'],
-                name='unique_project_task_number'
-            )
-        ]
     def clean(self):
         if self.start_time >= self.end_time:
             raise ValidationError("The start date of the task must be earlier than the end date.")
@@ -188,27 +180,6 @@ class Task(models.Model):
             logger.error(f"Ошибка предсказания: {str(e)}")
             return None
 
-    def save(self, *args, **kwargs):
-        if not self.pk and not self.task_number:
-            last_sprint = Sprint.objects.filter(
-                sprinttask__task=self
-            ).order_by('-start_date').first()
-
-            if not last_sprint:
-                raise ValueError("Task must be linked to a sprint.")
-
-            project = last_sprint.project
-
-            related_tasks = Task.objects.filter(
-                sprinttask__sprint__project=project
-            ).select_for_update().order_by('-task_number')
-
-            with transaction.atomic():
-                last_task = related_tasks.first()
-                self.task_number = last_task.task_number + 1 if last_task else 1
-
-        super().save(*args, **kwargs)
-
     def _prepare_lstm_input(self):
         # Получаем завершённые задачи
         completed_tasks = Task.objects.filter(
@@ -240,3 +211,20 @@ class Comment(models.Model):
     body = models.TextField(null=True)
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
     task = models.ForeignKey(Task, on_delete=models.CASCADE)
+
+def assign_task_number(task):
+    sprint_task = task.sprinttask_set.select_related('sprint').first()
+    if sprint_task and sprint_task.sprint.project:
+        project = sprint_task.sprint.project
+        max_number = (
+            Task.objects
+            .filter(sprinttask__sprint__project=project)
+            .exclude(id=task.id)
+            .aggregate(models.Max('task_number'))
+            .get('task_number__max')
+        )
+        new_number = (max_number or 0) + 1
+    else:
+        new_number = 1
+    task.task_number = new_number
+    task.save(update_fields=["task_number"])
