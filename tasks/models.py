@@ -140,38 +140,35 @@ class Task(models.Model):
         features = extract_task_features(self)
         return features[:-1] # Без времени старта
 
-    # Предсказание длительности задачи с помощью XGBoost или LSTM
+    # Предсказание длительности задачи
     def predict_duration(self):
         """Возвращает предсказанное время в часах и сохраняет в поле"""
-        from tasks.ml_utils import should_use_xgb
         from tasks.ml_load_model import load_models
-        import joblib
-        from django.conf import settings
-        import os
-
         try:
             models = load_models()
-            xgb_model = models.get('xgb')
+            catboost_model = models.get('catboost')
             lstm_model = models.get('lstm')
 
-            # Загрузка препроцессора
-            preprocessor_path = os.path.join(settings.MODELS_DIR, 'preprocessor.pkl')
-            preprocessor = joblib.load(preprocessor_path) if os.path.exists(preprocessor_path) else None
-
-            if xgb_model is None or preprocessor is None:
-                logger.error("Модели или препроцессор не загружены")
+            if catboost_model is None:
+                logger.error("CatBoost модель не загружена")
                 return None
 
-            if should_use_xgb(self.status.type):
-                # XGBoost модель
-                input_data = self._prepare_prediction_input()
-                processed_input = preprocessor.transform([input_data])
-                seconds = xgb_model.predict(processed_input)[0]
+            input_data = extract_task_features(self)
+            # Используем CatBoost, если статус позволяет
+            if self.status and self.status.type == 'planned':
+                seconds = catboost_model.predict([input_data])[0]
+
             else:
+                # Иначе LSTM
+                if lstm_model is None:
+                    logger.error("LSTM модель не загружена")
+                    return None
+
                 lstm_input = self._prepare_lstm_input()
                 if lstm_input is None:
                     return None
                 seconds = lstm_model.predict(lstm_input)[0][0]
+
             # Переводим секунды в часы, округляем
             hours = round(seconds / 3600, 1)
             self.predicted_duration = hours

@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
-from .models import Project
-from users.models import Group
+from .models import Project, Employee
+from users.models import Group, User
 
 
 class ProjectSerializer(serializers.ModelSerializer):
@@ -35,3 +35,9 @@ class ProjectSerializer(serializers.ModelSerializer):
         if data['start_time'] > data['end_time']:
             raise serializers.ValidationError("End time must occur after start time")
         return data
+
+class EmployeeSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(source='user.name')
+    class Meta:
+        model = Employee
+        fields = ['id', 'name']

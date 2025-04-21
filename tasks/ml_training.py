@@ -1,4 +1,6 @@
-from tasks.ml_data_preparer import PreparedData
+from catboost.core import CatBoostRegressor
+
+from tasks.ml_data_preparer import PreparedData, prepare_for_catboost
 import logging
 import torch
 
@@ -11,13 +13,12 @@ def train_model():
     Подготавливает данные, обучает модели, сохраняет их и возвращает метрики.
     """
     from task_tracker.settings import MIN_SAMPLES, LSTM_TIMESTEPS
-    from tasks.ml_data_preparer import prepare_for_xgb
 
     logger.info("Запуск обучения модели...")
 
     try:
         # Подготовка данных
-        data = prepare_for_xgb(task_ids=None)
+        data = prepare_for_catboost(task_ids=None)
         if data is None:
             raise ValueError("Нет данных для обучения")
         logger.debug(f"Количество примеров после подготовки: {len(data.x)}")
@@ -28,11 +29,10 @@ def train_model():
             create_fallback_models()
             return {'status': 'warning', 'message': 'Not enough data'}
 
-        # Обучение модели XGBoost
-        xgb_model, xgb_metrics = train_xgb(data)
-        logger.info("XGBoost обучение завершено.")
-        logger.debug(f"XGBoost метрики: {xgb_metrics}")
-
+        # Обучение модели CatBoost
+        catboost_model, catboost_metrics = train_catboost(data)
+        logger.info("CatBoost обучение завершено.")
+        logger.debug(f"CatBoost метрики: {catboost_metrics}")
         # Подготовка данных для LSTM
         x_seq, y_seq = train_lstm_prepare(data)
 
@@ -47,10 +47,10 @@ def train_model():
             logger.warning("Недостаточно последовательностей для LSTM обучения.")
 
         # Сохранение обученных моделей и препроцессора
-        save_models(xgb_model, lstm_model, data.preprocessor)
+        save_models(catboost_model, lstm_model, data.preprocessor)
         logger.info("Модели сохранены успешно.")
 
-        return {'status': 'success', **xgb_metrics, **lstm_metrics}
+        return {'status': 'success', **catboost_metrics, **lstm_metrics}
 
     except Exception as e:
         logger.exception("Ошибка при обучении моделей.")
@@ -58,15 +58,18 @@ def train_model():
         return {'status': 'error', 'message': str(e)}
 
 
-def train_xgb(data: PreparedData):
+def train_catboost(data: PreparedData):
     """
-    Обучение модели XGBoost и расчёт метрик.
+    Обучение модели CatBoost и расчёт метрик.
     """
     from sklearn.metrics import mean_absolute_error, mean_squared_error
-    import xgboost as xgb
+    from catboost import CatBoostRegressor
 
-    logger.info("Обучение XGBoost модели...")
-    model = xgb.XGBRegressor(objective='reg:squarederror')
+    logger.info("Обучение CatBoost модели...")
+    model = CatBoostRegressor(
+        loss_function='RMSE',
+        verbose=0
+    )
     model.fit(data.x, data.y)
 
     pred = model.predict(data.x)
@@ -75,7 +78,7 @@ def train_xgb(data: PreparedData):
         'mae': mean_absolute_error(data.y, pred)
     }
 
-    logger.debug(f"XGBoost метрики: {metrics}")
+    logger.debug(f"CatBoost метрики: {metrics}")
     return model, metrics
 
 
@@ -93,8 +96,8 @@ def train_lstm_prepare(data: PreparedData):
         logger.error("Неверный формат данных: отсутствуют x или y.")
         return np.array([]), np.array([])
 
-    x_raw = data.x
-    y_raw = data.y
+    x_raw = np.array(data.x)
+    y_raw = np.array(data.y)
 
     logger.debug(f"Размерности: x = {x_raw.shape}, y = {len(y_raw)}, TIMESTEPS = {LSTM_TIMESTEPS}")
 
@@ -147,7 +150,7 @@ def train_lstm(x_seq, y_seq):
     import torch.optim as optim
     from torch.utils.data import DataLoader, TensorDataset
 
-    logger.info("Обучение LSTM модели с PyTorch...")
+    logger.info("Обучение LSTM модели")
 
     # Преобразование данных в тензоры
     X_tensor = torch.FloatTensor(x_seq)
@@ -178,7 +181,7 @@ def train_lstm(x_seq, y_seq):
     return model, {'lstm_status': 'trained'}
 
 
-def save_models(xgb_model, lstm_model, preprocessor):
+def save_models(catboost_model, lstm_model, preprocessor):
     """
     Сохраняет модели и препроцессор в файловую систему.
     """
@@ -192,7 +195,7 @@ def save_models(xgb_model, lstm_model, preprocessor):
         os.makedirs(MODELS_DIR)
         logger.debug(f"Создана директория для моделей: {MODELS_DIR}")
 
-    joblib.dump(xgb_model, f'{MODELS_DIR}/xgb_model.pkl')
+    joblib.dump(catboost_model, f'{MODELS_DIR}/catboost_model.pkl')
     joblib.dump(preprocessor, f'{MODELS_DIR}/preprocessor.pkl')
 
     if lstm_model:
@@ -203,22 +206,21 @@ def save_models(xgb_model, lstm_model, preprocessor):
 
 def create_fallback_models():
     """
-    Создаёт и сохраняет резервную XGBoost модель.
+    Создаёт и сохраняет резервную CatBoost модель.
     Используется в случае ошибок или недостатка данных.
     """
     from task_tracker.settings import MODELS_DIR
-    import xgboost as xgb
     import numpy as np
 
-    logger.warning("Создание резервной модели XGBoost...")
+    logger.warning("Создание резервной модели CatBoost...")
 
     try:
         x = np.random.rand(10, 4)
         y = np.random.rand(10)
-        model = xgb.XGBRegressor()
+        model = CatBoostRegressor()
         model.fit(x, y)
 
-        model.save_model(f'{MODELS_DIR}/xgb_fallback.pkl')
+        model.save_model(f'{MODELS_DIR}/catboost_fallback.pkl')
         logger.info("Резервная модель создана")
 
     except Exception as e:

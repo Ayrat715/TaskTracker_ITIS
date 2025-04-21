@@ -85,21 +85,20 @@ def prepare_for_lstm(task_ids):
     return np.array(x), np.array(y)
 
 
-def prepare_for_xgb(task_ids=None):
+def prepare_for_catboost(task_ids=None):
     """
     Подготовка данных для XGBoost модели.
     Возвращает объект PreparedData, содержащий признаки, целевые значения и препроцессор.
     """
     from tasks.ml_utils import extract_task_features
-    from sklearn.preprocessing import StandardScaler
 
-    logger.info("Подготовка данных для XGBoost модели...")
+    logger.info("Подготовка данных для CatBoost модели...")
 
     # Получаем задачи
     tasks = MyDataPreparer.get_completed_tasks(task_ids)
 
     if not tasks.exists():
-        logger.warning("Нет завершённых задач для подготовки XGBoost.")
+        logger.warning("Нет завершённых задач для подготовки CatBoost.")
         return None
 
     x, y = [], []
@@ -117,18 +116,15 @@ def prepare_for_xgb(task_ids=None):
             logger.warning(f"Не удалось извлечь признаки из задачи {task.id}.")
             continue
 
-        # Для XGBoost используем не все признаки, возможно, последний является меткой
+        # Для CatBoost используем не все признаки, возможно, последний является меткой
         x.append(features[:-1])
         y.append(duration)
 
     if not x:
-        logger.warning("Нет данных для обучения модели XGBoost.")
+        logger.warning("Нет данных для обучения модели CatBoost.")
         return None
 
-    # Нормализуем признаки
-    preprocessor = StandardScaler()
-    x_scaled = preprocessor.fit_transform(x)
+    categorical_features_indices = []
 
-    logger.debug(f"XGBoost: подготовлено {len(x)} примеров.")
-    return PreparedData(x_scaled, y, preprocessor)
-
+    logger.debug(f"CatBoost: подготовлено {len(x)} примеров.")
+    return PreparedData(x, y, categorical_features_indices)

@@ -52,10 +52,6 @@ def get_category_avg_duration(categories):
 
     return avg_seconds
 
-# Функция определяет, нужно ли использовать XGBoost модель для предсказания по статусу задачи
-def should_use_xgb(status_name: str) -> bool:
-    return status_name in ['required check', 'planned']
-
 # Импортируем модель Task только при проверке типов(чтобы избежать циклических импортов)
 if TYPE_CHECKING:
     from tasks.models import Task

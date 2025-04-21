@@ -155,4 +155,3 @@ class TaskSerializer(serializers.ModelSerializer):
         return task
 
 
-
