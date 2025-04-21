@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from .models import Project, Employee
 from users.models import Group
+from .tests.conftest import project
 
 
 class ProjectSerializer(serializers.ModelSerializer):
@@ -45,4 +46,4 @@ class EmployeeSerializer(serializers.ModelSerializer):
 class EmployeeIdSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employee
-        fields = ['id']
+        fields = ['id', 'project_id']
