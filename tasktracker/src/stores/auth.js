@@ -1,9 +1,11 @@
 import axios from "axios";
 import {defineStore} from "pinia";
 
+
 export const useAuthStore = defineStore('auth', {
     state: () => ({
-        user: null
+        user: JSON.parse(localStorage.getItem('authUser')) || null,
+        isAuthenticated: !!localStorage.getItem('authUser')
     }),
     actions: {
         setUser(userData) {
@@ -15,17 +17,28 @@ export const useAuthStore = defineStore('auth', {
                 localStorage.removeItem('authUser');
             }
         },
+        async initialize() {
+            const savedUser = localStorage.getItem('authUser');
+            if (savedUser) {
+                this.user = JSON.parse(savedUser);
+                this.isAuthenticated = true;
+            }
+        },
         async logout() {
             try {
-                await axios.post('/account/logout/', {}, {
-                    withCredentials: true
+                await axios.get('http://localhost:8000/account/logout', {}, {
+                    withCredentials: true,
+                    headers: {
+                        'X-CSRFToken': this.getCookie('csrftoken'),
+                    }
                 });
-                this.user = null;
                 this.isAuthenticated = false;
-                localStorage.removeItem('authUser');
+                localStorage.clear();
+                this.setUser(null);
+                window.location.href = '/login';
             } catch (error) {
                 console.error('Logout failed:', error);
             }
-        }
+        },
     }
 })
