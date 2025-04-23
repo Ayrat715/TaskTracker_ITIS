@@ -194,28 +194,12 @@ export default {
         async loadUserProjects() {
             this.loadingProjects = true;
             try {
-                const employeeResponse = await axios.get(
-                    'http://localhost:8000/project/my-employee-ids/',
-                    {withCredentials: true}
-                );
-
-                const userProjectIds = [...new Set(
-                    employeeResponse.data.map(employee => employee.project_id)
-                )];
-
-                if (!userProjectIds.length) {
-                    this.userProjects = [];
-                    return;
-                }
-
-                const allProjectsResponse = await axios.get(
+                const response = await axios.get(
                     'http://localhost:8000/project/list/',
                     {withCredentials: true}
                 );
 
-                this.userProjects = allProjectsResponse.data.filter(project =>
-                    userProjectIds.includes(project.id)
-                );
+                this.userProjects = response.data || [];
 
             } catch (error) {
                 if (error.response?.status === 403) {
