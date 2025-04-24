@@ -89,9 +89,11 @@ export default {
                 })
 
                 if (response.data['user-data']) {
-                    this.authStore.setUser(response.data['user-data']); // Передаём user-data
+                    this.authStore.setUser(response.data['user-data']);
                     if (this.rememberMe) {
                         localStorage.setItem('rememberedEmail', this.email);
+                        localStorage.removeItem('lastViewedProject');
+                        localStorage.removeItem('lastViewedSprint');
                     } else {
                         localStorage.removeItem('rememberedEmail');
                     }

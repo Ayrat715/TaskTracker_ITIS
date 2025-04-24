@@ -69,7 +69,7 @@
                     </span>
                     <span class="sprint-description" v-if="currentSprint.description"
                           :title="currentSprint.description">
-                        Описание спринта: {{ truncateDescription(currentSprint.description) }}
+                        Описание спринта: {{ currentSprint.description }}
                     </span>
                     <CreateTaskBtn></CreateTaskBtn>
                 </div>
@@ -184,13 +184,6 @@ export default {
             }
         },
 
-        truncateDescription(description) {
-            const maxLength = 50;
-            if (description.length > maxLength) {
-                return `${description.substring(0, maxLength)}...`;
-            }
-            return `${description}`;
-        },
         async loadUserProjects() {
             this.loadingProjects = true;
             try {
