@@ -222,12 +222,14 @@ body {
     margin: 0;
     padding: 0;
     width: 100%;
+    overflow: hidden;
 }
 
 .app-container {
     display: flex;
     width: 100%;
     min-height: 100vh;
+    height: 100vh;
     margin: 0;
     padding: 0;
 }
@@ -287,6 +289,7 @@ body {
     border-top: 1px solid #6498F1;
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
     transition: left 0.3s ease;
+    flex-shrink: 0;
 }
 
 .footer-content {
@@ -679,4 +682,6 @@ body {
         display: none;
     }
 }
+
+
 </style>
