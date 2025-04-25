@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -67,6 +68,7 @@ class ProjectRoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProjectRole
         fields = ['id', 'name', 'project']
+        read_only_fields = ['project']
 
 
 class EmployeeSerializer(serializers.ModelSerializer):
@@ -75,18 +77,15 @@ class EmployeeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employee
         fields = ['id', 'user', 'user_name', 'project', 'role', 'current_load']
-        read_only_fields = ['current_load']
+        read_only_fields = ['current_load', 'project']
 
     def create(self, validated_data):
-        super().create(validated_data)
-
         user = validated_data.get('user')
-        project = validated_data.get('project')
+        project = get_object_or_404(Project, pk=self.context.get('project_id'))
         role = validated_data.get('role')
 
-        if Employee.objects.filter(user=user).exists():
+        if Employee.objects.filter(user=user, project=project).exists():
             raise ValidationError('Такой сотрудник уже существует!')
-
         if user not in project.group.user_set.all():
             raise ValidationError('Некорректные данные: пользователь, проект')
         if role.project != project:
@@ -94,18 +93,19 @@ class EmployeeSerializer(serializers.ModelSerializer):
         return Employee.objects.create(user=user, project=project, role=role)
 
 class EmployeeUpdateSerializer(EmployeeSerializer):
+
     class Meta:
         model = Employee
         fields = ['id', 'user', 'user_name', 'project', 'role', 'current_load']
-        read_only_fields = ['current_load', 'user']
+        read_only_fields = ['current_load', 'user', 'project']
 
     def update(self, instance, validated_data):
 
         user = instance.user
-        project = validated_data.get('project')
+        project = get_object_or_404(Project, pk=self.context.get('project_id'))
         role = validated_data.get('role')
 
-        if project.user_set.filter(user=user).exists():
+        if user not in project.group.user_set.all():
             raise ValidationError('Некорректное значение проекта. '
                                   'Пользователь не находится в группе проекта.')
 
