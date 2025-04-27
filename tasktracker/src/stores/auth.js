@@ -33,12 +33,19 @@ export const useAuthStore = defineStore('auth', {
                     }
                 });
                 this.isAuthenticated = false;
-                localStorage.clear();
+                localStorage.removeItem('authUser');
+                localStorage.removeItem('lastViewedProject');
+                localStorage.removeItem('lastViewedSprint');
                 this.setUser(null);
                 window.location.href = '/login';
             } catch (error) {
                 console.error('Logout failed:', error);
             }
         },
+        getCookie(name) {
+            const value = `; ${document.cookie}`
+            const parts = value.split(`; ${name}=`)
+            if (parts.length === 2) return parts.pop().split(';').shift()
+        }
     }
 })

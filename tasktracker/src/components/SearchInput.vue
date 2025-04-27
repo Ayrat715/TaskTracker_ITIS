@@ -55,7 +55,7 @@ export default {
 
 .search-box {
     position: relative;
-    width: 300px;
+    width: 400px;
 }
 
 .search-box input {
@@ -80,9 +80,5 @@ export default {
     box-shadow: 0 0 0 2px rgba(100, 152, 241, 0.2);
 }
 
-.search-box-container {
-    position: absolute;
-    left: 35%;
-    transform: translateX(-50%);
-}
+
 </style>

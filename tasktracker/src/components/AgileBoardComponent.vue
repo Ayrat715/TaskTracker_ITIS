@@ -97,6 +97,7 @@ export default {
         if (!projectsStore.currentProject && projectsStore.projects.length) {
             projectsStore.setCurrentProject(projectsStore.projects[0]);
         }
+        this.currentProject = projectsStore.currentProject;
 
         await this.loadStatuses()
         await this.loadPriorities()
@@ -157,12 +158,11 @@ export default {
             const status = this.taskStatuses.find(s => s.id.toString() === statusStr);
             return status ? status.type : 'planned';
         },
-        changeSprint(sprintId) {
-            const selectedSprint = this.sprints.find(s => s.id === sprintId.id);
-            if (selectedSprint) {
-                this.currentSprint = selectedSprint.id;
-                this.loadTasks();
-            }
+        async changeSprint(sprint) {
+            const projectsStore = useProjectsStore();
+            projectsStore.setCurrentSprint(sprint);
+            this.currentSprint = sprint.id;
+            await this.loadTasks();
         },
         async changeProject(project) {
             const projectsStore = useProjectsStore();
@@ -250,14 +250,36 @@ export default {
                 );
 
                 if (this.sprints.length) {
-                    const now = new Date();
-                    const activeSprint = this.sprints.find(sprint => {
-                        const start = new Date(sprint.start_time);
-                        const end = new Date(sprint.end_time);
-                        return start <= now && now <= end;
-                    });
+                    this.sprints.sort((a, b) =>
+                        new Date(b.start_time) - new Date(a.start_time)
+                    );
 
-                    this.currentSprint = activeSprint ? activeSprint.id : this.sprints[0].id;
+                    const projectsStore = useProjectsStore();
+                    let selectedSprint = projectsStore.currentSprint;
+                    if (selectedSprint) {
+                        const sprintExists = this.sprints.some(s =>
+                            s.id === selectedSprint.id &&
+                            s.project === this.currentProject.id);
+                        if (!sprintExists) {
+                            selectedSprint = null;
+                        }
+                    }
+
+                    if (!selectedSprint) {
+                        const now = new Date();
+                        selectedSprint = this.sprints.find(sprint => {
+                            const start = new Date(sprint.start_time);
+                            const end = new Date(sprint.end_time);
+                            return start <= now && now <= end;
+                        }) || this.sprints[0];
+                    }
+
+                    if (selectedSprint) {
+                        projectsStore.setCurrentSprint(selectedSprint);
+                        this.currentSprint = selectedSprint.id;
+                    } else {
+                        this.currentSprint = null;
+                    }
                     await this.loadTasks();
                 } else {
                     this.currentSprint = null;
