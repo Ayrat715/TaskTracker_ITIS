@@ -42,7 +42,6 @@
                     <template #item="{ element: task }">
                         <TaskCardComponent
                             :task="task"
-                            @click="openTaskDetails(task)"
                             :data-id="task.id"
                             draggable="true"
                             @dragstart="onDragStart($event, task)"
