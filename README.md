@@ -1,7 +1,11 @@
 # TaskTracker_ITIS
 This is a project on the discipline "Digital Departments", the purpose of which will be to create a website for tracking tasks within projects for the Institute of Information Technology and Intelligent Systems.
 API Endpoints
-
+## Management-команды в Django
+### python manage.py assign_categories - Автоматически назначает или создаёт категории для задач без категории
+### python manage.py import_from_dataset - Импорт данных из внешнего датасета
+### python manage.py retrain_classifier - Переобучает ML-классификатор категорий задач на основе текущих данных из базы
+## API
 ### Все API endpoints доступны по базовому URL (без деплоя пока https://localhost:8000/)
 
 ## Спринты (Sprints)
