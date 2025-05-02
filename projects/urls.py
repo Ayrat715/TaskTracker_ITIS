@@ -1,18 +1,15 @@
-from django.urls import path
+from rest_framework.routers import DefaultRouter
+from rest_framework_nested.routers import NestedDefaultRouter
 
-from projects.views import ProjectCreateApiView, ProjectDetailApiView, \
-    UserProjectListViewSet, ProjectEmployeesView, MyEmployeeIdView
+from projects.views import ProjectViewSet, ProjectRoleViewSet, EmployeeViewSet
 
 app_name = "projects"
 
-urlpatterns = [
-    path('create/', ProjectCreateApiView.as_view(), name='create'),
-    path(
-        'list/',
-        UserProjectListViewSet.as_view(),
-        name='user-projects'
-    ),
-    path('<int:pk>/', ProjectDetailApiView.as_view(), name='detail'),
-    path('<int:project_id>/employees/', ProjectEmployeesView.as_view(), name='project-employees'),
-    path('my-employee-ids/', MyEmployeeIdView.as_view(), name='my-employee-ids'),
-]
+router = DefaultRouter()
+router.register('', ProjectViewSet, basename='index')
+
+nested_router = NestedDefaultRouter(router, r'', lookup='project')
+nested_router.register('employees', EmployeeViewSet, basename='project-employees')
+nested_router.register('roles', ProjectRoleViewSet, basename='project-roles')
+
+urlpatterns = router.urls + nested_router.urls

@@ -6,7 +6,7 @@ from django.utils.timezone import now, timedelta
 from rest_framework import status
 from rest_framework.request import Request
 
-from projects.models import Project
+from projects.models import Project, Employee
 from projects.tests.conftest import group
 from users.models import Group
 
@@ -39,7 +39,7 @@ def test_create_project(request: Request, client_fixture: User,
     """
 
     client = request.getfixturevalue(client_fixture)
-    url = reverse("projects:create")
+    url = reverse("projects:index-list")
     data = {
         "name": "New Project",
         "description": "Some description",
@@ -60,7 +60,8 @@ def test_create_project(request: Request, client_fixture: User,
 )
 @pytest.mark.django_db
 def test_view_project(request: Request, client_fixture: User,
-                      expected_status: status, project: Project) -> None:
+                      expected_status: status, project: Project,
+                      employee: Employee) -> None:
     """
     Параметризованный тест: просмотр проекта.
     Варианты тестирования:
@@ -71,11 +72,11 @@ def test_view_project(request: Request, client_fixture: User,
     :param client_fixture: Фикстура клиента.
     :param expected_status: Ожидаемый статус-код.
     :param project: Проект.
-    :return: None
+    :param employee: Сотрудник проекта.
     """
 
     client = request.getfixturevalue(client_fixture)
-    url = reverse("projects:detail", kwargs={"pk": project.id})
+    url = reverse("projects:index-detail", kwargs={"pk": project.id})
     response = client.get(url)
     assert response.status_code == expected_status
 
@@ -89,7 +90,8 @@ def test_view_project(request: Request, client_fixture: User,
 )
 @pytest.mark.django_db
 def test_edit_project(request: Request, client_fixture: User,
-                      expected_status: status, project: Project) -> None:
+                      expected_status: status, project: Project,
+                      employee: Employee) -> None:
     """
     Параметризованный тест: редактирование проекта.
     Варианты тестирования:
@@ -100,11 +102,11 @@ def test_edit_project(request: Request, client_fixture: User,
     :param client_fixture: Фикстура клиента.
     :param expected_status: Ожидаемый статус-код.
     :param project: Проект.
-    :return: None
+    :param employee: Сотрудник проекта.
     """
 
     client = request.getfixturevalue(client_fixture)
-    url = reverse("projects:detail", kwargs={"pk": project.id})
+    url = reverse("projects:index-detail", kwargs={"pk": project.id})
     data = {
         "name": "Updated Project Name",
         "description": project.description,
@@ -130,7 +132,8 @@ def test_edit_project(request: Request, client_fixture: User,
 )
 @pytest.mark.django_db
 def test_delete_project(request: Request, client_fixture: User,
-                        expected_status: status, project: Project) -> None:
+                        expected_status: status, project: Project,
+                        employee: Employee) -> None:
     """
     Параметризованный тест: удаление проекта.
     Варианты тестирования:
@@ -141,11 +144,11 @@ def test_delete_project(request: Request, client_fixture: User,
     :param client_fixture: Фикстура клиента.
     :param expected_status: Ожидаемый статус-код.
     :param project: Проект.
-    :return: None
+    :param employee: Сотрудник проекта.
     """
 
     client = request.getfixturevalue(client_fixture)
-    url = reverse("projects:detail", kwargs={"pk": project.id})
+    url = reverse("projects:index-detail", kwargs={"pk": project.id})
     response = client.delete(url)
     assert response.status_code == expected_status
     if expected_status == status.HTTP_204_NO_CONTENT:
