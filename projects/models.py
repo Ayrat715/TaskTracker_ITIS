@@ -5,12 +5,12 @@ from users.models import User, Group
 
 class Project(models.Model):
     name = models.CharField(max_length=50, null=False)
-    description = models.TextField()
-    start_time = models.DateTimeField()
-    end_time = models.DateTimeField()
+    description = models.TextField(null=True)
+    start_time = models.DateTimeField(null=False)
+    end_time = models.DateTimeField(null=True)
     group = models.ForeignKey(Group, on_delete=models.CASCADE)
     def clean(self):
-        if self.start_time >= self.end_time:
+        if self.end_time is not None and self.start_time >= self.end_time:
             raise ValidationError("End time must be after start time.")
 
 class ProjectRole(models.Model):

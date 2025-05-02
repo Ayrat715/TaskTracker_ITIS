@@ -78,8 +78,16 @@ def prepare_for_lstm(task_ids):
     # Извлекаем признаки и целевые значения для каждой задачи
     for task in tasks:
         features = extract_task_features(task, base_time=start_time)
+
+        # Нормализация признаков
+        if features:
+            features[2] = features[2] / 3600
+            features[3] = features[3] / 1000
+            features[4] = features[4] / 86400
+
         x.append(features)
-        y.append(task.duration_sec)
+        duration_hours = task.duration_sec / 3600
+        y.append(duration_hours)
 
     logger.debug(f"LSTM: подготовлено {len(x)} примеров.")
     return np.array(x), np.array(y)
@@ -115,10 +123,11 @@ def prepare_for_catboost(task_ids=None):
         if features is None:
             logger.warning(f"Не удалось извлечь признаки из задачи {task.id}.")
             continue
-
-        # Для CatBoost используем не все признаки, возможно, последний является меткой
+        features[2] = features[2] / 3600
+        features[3] = features[3] / 1000
         x.append(features[:-1])
-        y.append(duration)
+        duration_hours = duration / 3600
+        y.append(duration_hours)
 
     if not x:
         logger.warning("Нет данных для обучения модели CatBoost.")
