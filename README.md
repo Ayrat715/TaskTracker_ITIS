@@ -113,18 +113,20 @@ API Endpoints
     [
         {
             "id": <number>,
+            "task_number": <number>,
             "name": <string>,
             "description": <string>,
-            "status": <number>,
-            "executor": <number>,
-            "sprint": [<number>], 
             "given_time": <string (ISO 8601 datetime)>,
             "start_time": <string (ISO 8601 datetime)>,
             "end_time": <string (ISO 8601 datetime)>,
+            "predicted_duration": <number>,
+            "status": <number>,
+            "author": <number>,
             "priority": <number>,
-            "category": <number>,
-            "nlp_metadata": JSON
+            "executors": [<number>],
+            "sprints": [<number>]
         }
+        ...
     ]
 
 ### POST task/tasks/ - Создать новую задачу
@@ -132,19 +134,17 @@ API Endpoints
 #### Тело запроса:
 
     {
+        "executor_ids": [<number>],
+        "sprint": [<number>],
         "name": <string>,
         "description": <string>,
-        "status": <number>,
-        "executor": <number>,
-        "sprint": [<number>], 
         "given_time": <string (ISO 8601 datetime)>,
         "start_time": <string (ISO 8601 datetime)>,
         "end_time": <string (ISO 8601 datetime)>,
-        "priority": <number>,
-        "category": <number>,
-        "nlp_metadata": JSON
+        "status": <number>,
+        "author": <number>,
+        "priority": <number>
     }
-
 
 ### GET task/tasks/{id}/ - Получить детали задачи
 
@@ -152,17 +152,18 @@ API Endpoints
 
     {
         "id": <number>,
+        "task_number": <number>,
+        "executor_ids": [<number>],
+        "sprint_ids": [<number>],
         "name": <string>,
         "description": <string>,
-        "status": <number>,
-        "executor": <number>,
-        "sprint": [<number>], 
         "given_time": <string (ISO 8601 datetime)>,
         "start_time": <string (ISO 8601 datetime)>,
         "end_time": <string (ISO 8601 datetime)>,
+        "status": <number>,
+        "author": <number>,
         "priority": <number>,
-        "category": <number>,
-        "nlp_metadata": JSON
+        "sprints": [<number>]
     }
 
 ### PUT task/tasks/{id}/ - Обновить задачу
@@ -170,18 +171,16 @@ API Endpoints
 #### Ответ (200 OK):
 
     {
-        "id": <number>,
+        "executor_ids": [<number>],
+        "sprint_ids": [<number>],
         "name": <string>,
         "description": <string>,
-        "status": <number>,
-        "executor": <number>,
-        "sprint": [<number>], 
         "given_time": <string (ISO 8601 datetime)>,
         "start_time": <string (ISO 8601 datetime)>,
         "end_time": <string (ISO 8601 datetime)>,
-        "priority": <number>,
-        "category": <number>,
-        "nlp_metadata": JSON
+        "status": <number>,
+        "author": <number>,
+        "priority": <number>
     }
 
 ### PATCH task/tasks/{id}/ - Частично обновить задачу
@@ -244,9 +243,20 @@ API Endpoints
         "email": ["Email or password is incorrect"]
     }
 
+### GET /project/my-employee-ids/ - получение всех id employee, которыми является данный user
+#### Ответ (200 OK):
+
+    [
+        {
+            "id": <number>,
+            "project_id": <number>
+        }
+        ...
+    ]
+
 ## Проекты (Projects)
 
-### POST /project/create/ - для создания проекта
+### POST /project/create/ - создание проекта
 
 #### Тело запроса:
 
@@ -258,7 +268,7 @@ API Endpoints
         "group": <number>,
     }
 
-### GET /project/{id}/ - для получения данных проекта
+### GET /project/{id}/ - получение данных проекта
 
 #### Ответ (200 OK):
 
@@ -271,9 +281,28 @@ API Endpoints
         "group": <number>,
     }
 
-### PATCH /project/{id}/ - для изменения данных проекта
+### PATCH /project/{id}/ - изменение данных проекта
+    {
+        "id": <number>,
+        "name": <string>,
+        "description": <string>,
+        "start_time": <string (ISO 8601 datetime)>,
+        "end_time": <string (ISO 8601 datetime)>,
+        "group": <number>
+    }
 
 ### DELETE /project/{id}/ - для удаления проекта
+
+### GET /project/{id}/employees/ - Все работники конкретного проекта
+#### Ответ (200 OK):
+
+    [
+        {
+            "id": <number>, # employee.id
+            "name": <string>
+        },
+        ...
+    ]
 
 ### Ошибки:
 
@@ -289,7 +318,64 @@ API Endpoints
         "non_field_errors": ["End time must occur after start time"]
     }
 
+## Группы(Group)
 
+### GET account/users/?email= - поиск пользователей по почте
+#### Ответ (200 OK):
+    {
+        "id": <number>,
+        "email": <string>
+    }
+
+### GET account/groups/ - список групп
+#### Ответ (200 OK):
+#### users: list - целочисленный список идентификаторов пользователей
+    [
+        {
+            "id": <number>,
+            "name": <string>,
+            "users": [<number>]
+        }
+        ...
+    ]
+
+### POST /account/groups/ - создание группы
+#### Ответ (201 Created):
+    {
+      "name": <string>,
+      "users": [<number>]
+    }
+
+### PUT account/groups/{id} - изменение состава пользователей (добавление нового пользователя)
+    {
+      "users": [<number>]
+    }
+
+### DELETE account/groups-detail/{id} - удаление группы
+
+
+### DELETE account/groups/{pk}/remove-user/{user_id}/ - удаление пользователя из группы
+
+
+### GET task/priorities/ - список всех приоритетов
+#### Ответ (200 OK):
+    [
+        {
+            "id": <number>,
+            "type": <string>,
+            "weight": <number>
+        }
+        ...
+    ]
+### GET task/statuses/ - список всех статусов
+#### Ответ (200 OK):
+    [
+        {
+            "id": <number>,
+            "type": <string>
+        }
+        ...
+    ]
 
 ## Дополнительная информация
 ## Статусы задач (Status)

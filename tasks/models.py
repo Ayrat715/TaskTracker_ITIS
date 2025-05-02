@@ -1,7 +1,12 @@
 from django.core.exceptions import ValidationError
 from django.db import models
+from model_utils.tracker import FieldTracker
 from projects.models import Employee, Project
+from tasks.text_processing import preprocess
+from tasks.ml_utils import extract_task_features
 from users.models import User
+import logging
+logger = logging.getLogger(__name__)
 
 class TaskCategory(models.Model):
     """ Категории для классификации задач по темам или типам работ.
@@ -9,9 +14,42 @@ class TaskCategory(models.Model):
         с использованием NLP-анализа при создании задач.
         Примеры: 'Разработка', 'Тестирование', 'Документация'
     """
+    # Отслеживание изменений определённых полей
+    tracker = FieldTracker(fields=['keywords', 'auto_assign', 'min_confidence'])
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    keywords = models.TextField(blank=True)
+    keywords = models.TextField(
+        blank=True,
+        help_text="Список ключевых слов через запятую"
+    )
+    processed_keywords = models.TextField(
+        blank=True,
+        editable=False,
+        help_text="Автоматически обработанные ключевые слова"
+    )
+
+    def save(self, *args, **kwargs):
+        if self.keywords:
+            print(f"Processing keywords: {self.keywords}")
+            processed = []
+            for kw in self.keywords.split(','):
+                cleaned_kw = kw.strip()
+                if cleaned_kw:
+                    try:
+                        # Обработка ключевого слова (лемматизация, нормализация и т.п.)
+                        processed_kw = preprocess(cleaned_kw)
+                        processed.append(processed_kw)
+                    except Exception as e:
+                        print(f"Error processing '{cleaned_kw}': {str(e)}")
+                        continue  # Пропуск некорректные ключи
+            self.processed_keywords = ','.join(processed)
+            print(f"Processed keywords: {self.processed_keywords}")
+        super().save(*args, **kwargs)
+    # Определяет, нужно ли автоматически присваивать категорию при создании задачи
+    auto_assign = models.BooleanField(default=False)
+    # Минимальная уверенность для автоматической классификации
+    min_confidence = models.FloatField(default=0.7)
+
 
 class Status(models.Model):
     TYPE_CHOICES = [
@@ -29,6 +67,7 @@ class Status(models.Model):
                              f"Valid types are {', '.join(valid_statuses)}.")
         super().save(*args, **kwargs)
 
+
 class Priority(models.Model):
     TYPE_WEIGHT_MAP = {
         'high': 4,
@@ -38,16 +77,19 @@ class Priority(models.Model):
     }
     TYPE_CHOICES = [(key, key.title()) for key in TYPE_WEIGHT_MAP.keys()]
     type = models.CharField(max_length=10, choices=TYPE_CHOICES, unique=True)
+
     def __str__(self):
         return f"{self.get_type_display()} (weight: {self.get_weight()})"
+
     def get_weight(self):
         return self.TYPE_WEIGHT_MAP[self.type]
+
     def save(self, *args, **kwargs):
-        self.weight = self.TYPE_WEIGHT_MAP[self.type]
         if self.type not in dict(self.TYPE_CHOICES):
             raise ValueError(f"Invalid type: {self.type}. "
                              f"Valid types are {', '.join(dict(self.TYPE_CHOICES).keys())}.")
         super().save(*args, **kwargs)
+
 
 class Sprint(models.Model):
     name = models.CharField(max_length=50)
@@ -60,7 +102,10 @@ class Sprint(models.Model):
         if self.start_time >= self.end_time:
             raise ValidationError("The start date of the sprint must be earlier than the end date.")
 
+
 class Task(models.Model):
+    task_number = models.IntegerField(blank=True, null=True)
+    tracker = FieldTracker(fields=['name', 'description'])
     def clean(self):
         if self.start_time >= self.end_time:
             raise ValidationError("The start date of the task must be earlier than the end date.")
@@ -72,36 +117,114 @@ class Task(models.Model):
     given_time = models.DateTimeField(null=True, blank=True)
     start_time = models.DateTimeField()
     end_time = models.DateTimeField(null=True)
-    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    author = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True)
     priority = models.ForeignKey(Priority, on_delete=models.PROTECT, null=True, blank=True)
+    predicted_duration = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Предсказанное время выполнения в часах"
+    )
     category = models.ForeignKey(
         TaskCategory,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,)
     nlp_metadata = models.JSONField(
+        default=dict,
         null=True,
         blank=True,
         help_text="Сохраненные результаты NLP анализа (ключевые слова, срочность и т.д.)"
-        """
-        Метаданные NLP-обработки описания задачи. Содержит:
-        - извлеченные ключевые слова
-        - распознанные даты/дедлайны
-        - оценку срочности
-        - другие параметры для автоматического управления задачами
-        """
     )
+
+    # Формирует входные признаки (features) для моделей машинного обучения, исключая время
+    def _prepare_prediction_input(self):
+        features = extract_task_features(self)
+        return features[:-1] # Без времени старта
+
+    # Предсказание длительности задачи
+    def predict_duration(self):
+        """Возвращает предсказанное время в часах и сохраняет в поле"""
+        from tasks.ml_load_model import load_models
+        try:
+            models = load_models()
+            catboost_model = models.get('catboost')
+            lstm_model = models.get('lstm')
+
+            if catboost_model is None:
+                logger.error("CatBoost модель не загружена")
+                return None
+
+            input_data = extract_task_features(self)
+            # Используем CatBoost, если статус позволяет
+            if self.status and self.status.type == 'planned':
+                seconds = catboost_model.predict([input_data])[0]
+
+            else:
+                # Иначе LSTM
+                if lstm_model is None:
+                    logger.error("LSTM модель не загружена")
+                    return None
+
+                lstm_input = self._prepare_lstm_input()
+                if lstm_input is None:
+                    return None
+                seconds = lstm_model.predict(lstm_input)[0][0]
+
+            # Переводим секунды в часы, округляем
+            hours = round(seconds / 3600, 1)
+            self.predicted_duration = hours
+            self.save(update_fields=['predicted_duration'])
+            return hours
+
+        except Exception as e:
+            logger.error(f"Ошибка предсказания: {str(e)}")
+            return None
+
+    def _prepare_lstm_input(self):
+        # Получаем завершённые задачи
+        completed_tasks = Task.objects.filter(
+            status__type='completed',
+            start_time__isnull=False
+        ).order_by('start_time')
+
+        if not completed_tasks.exists():
+            logger.warning("Нет завершенных задач для LSTM")
+            return None
+        # Время первой задачи — базовая точка отсчёта
+        base_time = completed_tasks.first().start_time
+        features = extract_task_features(self, base_time)
+        return [[features]]
+
 
 class Executor(models.Model):
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
     task = models.ForeignKey(Task, on_delete=models.CASCADE)
 
+
 class SprintTask(models.Model):
     sprint = models.ForeignKey(Sprint, on_delete=models.CASCADE)
     task = models.ForeignKey(Task, on_delete=models.CASCADE)
+
 
 class Comment(models.Model):
     title = models.CharField(max_length=255, null=False)
     body = models.TextField(null=True)
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
     task = models.ForeignKey(Task, on_delete=models.CASCADE)
+
+def assign_task_number(task):
+    sprint_task = task.sprinttask_set.select_related('sprint').first()
+    if sprint_task and sprint_task.sprint.project:
+        project = sprint_task.sprint.project
+        max_number = (
+            Task.objects
+            .filter(sprinttask__sprint__project=project)
+            .exclude(id=task.id)
+            .aggregate(models.Max('task_number'))
+            .get('task_number__max')
+        )
+        new_number = (max_number or 0) + 1
+    else:
+        new_number = 1
+    task.task_number = new_number
+    task.save(update_fields=["task_number"])
