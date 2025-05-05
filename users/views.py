@@ -2,6 +2,7 @@ from http import HTTPStatus
 
 from django.contrib.auth import login, get_user_model
 from django.contrib.auth.models import Group
+from django.db.models import QuerySet
 from django.http import Http404
 from django.shortcuts import get_list_or_404
 from rest_framework import generics, permissions, status, viewsets
@@ -277,3 +278,12 @@ class Logout(APIView):
 
         request.user.auth_token.delete()
         return Response(status=status.HTTP_200_OK)
+
+
+class UserStatus(generics.RetrieveAPIView):
+    serializer_class = UserSerializer
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get_object(self) -> User:
+        if self.request.user.is_authenticated:
+            return User.objects.get(id=self.request.user.id)
