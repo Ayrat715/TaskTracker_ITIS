@@ -9,9 +9,11 @@ from projects.serializers import ProjectSerializer, ProjectRoleSerializer, \
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
-    queryset = Project.objects.all()
     permission_classes = (IsEmployeeOfProject, )
     serializer_class = ProjectSerializer
+
+    def get_queryset(self):
+        return Project.objects.filter(group__user=self.request.user)
 
 
 class ProjectRoleViewSet(viewsets.ModelViewSet):
