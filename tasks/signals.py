@@ -30,7 +30,7 @@ def categorize_task(sender, instance, created, **kwargs):
         return
 
     classifier = CategoryClassifier()
-    predicted_category_name, confidence = classifier.predict(f"{task.title} {task.description}")
+    predicted_category_name, confidence = classifier.predict(f"{task.name} {task.description}")
     logger.info(f"ML-классификатор предсказал категорию '{predicted_category_name}' с уверенностью {confidence:.2f} для задачи ID={task.id}")
 
     if confidence > 0.8:
@@ -49,7 +49,7 @@ def categorize_task(sender, instance, created, **kwargs):
         logger.warning(f"YAKE не нашёл ключевых слов для задачи ID={task.id}, используется KeyBERT")
         kw_model = KeyBERT(model='all-MiniLM-L6-v2')
         keyphrases = kw_model.extract_keywords(task.description, keyphrase_ngram_range=(1, 2), top_n=3)
-        name = keyphrases[0][0] if keyphrases else task.title[:50]
+        name = keyphrases[0][0] if keyphrases else task.name[:50]
         logger.info(f"KeyBERT выделил ключевые фразы: {[kp[0] for kp in keyphrases]}")
 
     new_category = TaskCategory.objects.create(
