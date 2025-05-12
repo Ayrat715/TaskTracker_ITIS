@@ -49,7 +49,7 @@ import axios from 'axios'
 import {useAuthStore} from '@/stores/auth'
 
 export default {
-    name : 'LoginComponent',
+    name: 'LoginComponent',
     data() {
         return {
             email: '',
@@ -88,16 +88,21 @@ export default {
                     }
                 })
 
-                this.authStore.setUser(response.data.user)
-
-                if (this.rememberMe) {
-                    localStorage.setItem('rememberedEmail', this.email)
+                if (response.data['user-data']) {
+                    this.authStore.setUser(response.data['user-data']);
+                    if (this.rememberMe) {
+                        localStorage.setItem('rememberedEmail', this.email);
+                        localStorage.removeItem('lastViewedProject');
+                        localStorage.removeItem('lastViewedSprint');
+                    } else {
+                        localStorage.removeItem('rememberedEmail');
+                    }
+                    await this.router.push({name: 'home'});
                 } else {
-                    localStorage.removeItem('rememberedEmail')
+                    this.error = 'Ошибка: сервер не вернул данные пользователя';
                 }
-
-                await this.router.push({name: 'home'})
-            } catch (err) {
+            } catch
+                (err) {
                 if (err.response) {
                     if (err.response.status === 400) {
                         this.error = 'Неверные email или пароль'
