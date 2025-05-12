@@ -3,7 +3,7 @@ This is a project on the discipline "Digital Departments", the purpose of which 
 API Endpoints
 ## Management-команды в Django
 ### python manage.py assign_categories - Автоматически назначает или создаёт категории для задач без категории
-### python manage.py import_from_dataset - Импорт данных из внешнего датасета
+### python manage.py import_project_data - Импорт данных из внешнего датасета
 ### python manage.py retrain_classifier - Переобучает ML-классификатор категорий задач на основе текущих данных из базы
 ## API
 ### Все API endpoints доступны по базовому URL (без деплоя пока https://localhost:8000/)
