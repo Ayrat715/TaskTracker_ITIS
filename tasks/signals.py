@@ -30,26 +30,34 @@ def categorize_task(sender, instance, created, **kwargs):
         return
 
     classifier = CategoryClassifier()
-    predicted_category_name, confidence = classifier.predict(f"{task.name} {task.description}")
-    logger.info(f"ML-классификатор предсказал категорию '{predicted_category_name}' с уверенностью {confidence:.2f} для задачи ID={task.id}")
+    predicted_category_name, confidence = classifier.predict(task)
 
-    if confidence > 0.8:
-        category, _ = TaskCategory.objects.get_or_create(name=predicted_category_name)
+    if predicted_category_name and confidence > 0.8:
+        logger.info(
+            f"ML-классификатор предсказал категорию '{predicted_category_name}' с уверенностью {confidence:.2f} для задачи ID={task.id}")
+        try:
+            category = TaskCategory.objects.get(name=predicted_category_name)
+        except TaskCategory.DoesNotExist:
+            category = TaskCategory.objects.create(
+                name=predicted_category_name,
+                description=f"Автоматически созданная категория (ML, уверенность: {confidence:.2f})"
+            )
         task.category = category
         task.save()
         logger.info(f"Категория присвоена по ML: {predicted_category_name} для задачи ID={task.id}")
         return
 
     extractor = KeywordExtractor(lan="ru", n=3, top=3)
-    keywords = extractor.extract_keywords(task.description)
+    keywords = extractor.extract_keywords(task.description or '')
     if keywords:
         name = keywords[0][0]
         logger.info(f"YAKE выделил ключевые слова: {[kw[0] for kw in keywords]}")
     else:
         logger.warning(f"YAKE не нашёл ключевых слов для задачи ID={task.id}, используется KeyBERT")
         kw_model = KeyBERT(model='all-MiniLM-L6-v2')
-        keyphrases = kw_model.extract_keywords(task.description, keyphrase_ngram_range=(1, 2), top_n=3)
-        name = keyphrases[0][0] if keyphrases else task.name[:50]
+        description = task.description or task.name
+        keyphrases = kw_model.extract_keywords(description or '', keyphrase_ngram_range=(1, 2), top_n=3)
+        name = keyphrases[0][0] if keyphrases else task.name[:50] if task.name else "Новая категория"
         logger.info(f"KeyBERT выделил ключевые фразы: {[kp[0] for kp in keyphrases]}")
 
     new_category = TaskCategory.objects.create(
