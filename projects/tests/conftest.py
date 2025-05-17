@@ -2,7 +2,7 @@ import pytest
 from django.contrib.auth import get_user_model
 
 from django.utils.timezone import now, timedelta
-from projects.models import Project
+from projects.models import Project, Employee, ProjectRole
 from rest_framework.test import APIClient
 from users.models import Group
 
@@ -69,6 +69,25 @@ def project(group: Group) -> Project:
         end_time=now() + timedelta(days=1),
         group=group
     )
+
+
+@pytest.fixture
+def employee(project: Project, user_in_group: User) -> Employee:
+    """
+    Создание экземпляра сотрудника проекта.
+
+    :param project: Экземпляр проекта.
+    :param user_in_group: Пользователь, находящийся в группе проекта.
+    :return: Employee сотрудник проекта.
+    """
+
+    employee = Employee.objects.create(
+        user=user_in_group,
+        project=project,
+        role=ProjectRole.objects.create(name="Test Role", project=project)
+    )
+
+    return employee
 
 
 @pytest.fixture

@@ -1,90 +1,58 @@
-from django.db.models import QuerySet
-from rest_framework import generics, permissions
-from rest_framework.response import Response
-from .projects_permitions import ProjectPermissions
-from projects.models import Project, Employee
-from projects.serializers import ProjectSerializer, EmployeeSerializer, EmployeeIdSerializer
+from rest_framework import permissions, viewsets, status
+
+from .projects_permitions import IsEmployeeOfProject, IsEmployeeOfProjectRole, \
+    IsEmployee
+
+from projects.models import Project, ProjectRole, Employee
+from projects.serializers import ProjectSerializer, ProjectRoleSerializer, \
+    EmployeeSerializer, EmployeeUpdateSerializer
 
 
-class ProjectCreateApiView(generics.CreateAPIView):
-    """
-    CBV, основанное на модели APIView. Отвечает за создание проекта.
-
-    Атрибуты
-    ----------
-    queryset
-        модель для работы с базой данных.
-    serializer_class:
-        класс ответственный за сериализацию/десериализацию данных.
-    permission_classes:
-        регулирование доступа к API.
-    """
-
-    queryset = Project.objects.all()
+class ProjectViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsEmployeeOfProject, )
     serializer_class = ProjectSerializer
-    permission_classes = (permissions.IsAuthenticated,)
+
+    def get_queryset(self):
+        return Project.objects.filter(group__user=self.request.user)
 
 
-class ProjectDetailApiView(generics.RetrieveUpdateDestroyAPIView):
-    """
-    CBV, совмещающий просмотр, изменение, удаление объекта.
-
-    Атрибуты
-    ----------
-    queryset
-        модель для работы с базой данных.
-    serializer_class:
-        класс ответственный за сериализацию/десериализацию данных.
-    permission_classes:
-        регулирование доступа к API.
-    """
-
-    queryset = Project.objects.all()
-    serializer_class = ProjectSerializer
-    permission_classes = (permissions.IsAuthenticated, ProjectPermissions)
-
-class UserProjectListViewSet(generics.ListAPIView):
-    """
-    Список проектов авторизованного пользователя.
-
-    Атрибуты
-    ----------
-    model:
-        Экземпляр модели
-    serializer_class:
-        Класс, реализующий сериализацию.
-    permission_classes:
-        Класс, регулирующий доступ к ресурсу.
-    """
-
-    model = Project
-    serializer_class = ProjectSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self) -> QuerySet:
-        """
-        Получение экземпляра проектов по авторизованному пользователю.
-
-        :return: QuerySet список проектов, принадлежащих авторизованному
-        пользователю.
-        """
-
-        user_id = self.request.user.id
-        return Project.objects.filter(group__user=user_id)
+class ProjectRoleViewSet(viewsets.ModelViewSet):
+    queryset = ProjectRole.objects.all()
+    serializer_class = ProjectRoleSerializer
+    permission_classes = [IsEmployeeOfProjectRole]
 
 
-class ProjectEmployeesView(generics.ListAPIView):
+    def get_queryset(self):
+        project_role = ProjectRole.objects.filter(project_id=self.kwargs.get('project_pk'))
+        return project_role
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['project_id'] = self.kwargs.get('project_pk')
+        return context
+
+    def perform_create(self, serializer):
+        serializer.save(project_id=self.kwargs.get('project_pk'))
+
+
+class EmployeeViewSet(viewsets.ModelViewSet):
     serializer_class = EmployeeSerializer
-    def get_queryset(self):
-        project_id = self.kwargs.get('project_id')
-        return Employee.objects.filter(project_id=project_id)
-
-
-class MyEmployeeIdView(generics.ListAPIView):
-    permission_classes = [permissions.IsAuthenticated]
-    serializer_class = EmployeeIdSerializer
+    permission_classes = [IsEmployee]
 
     def get_queryset(self):
-        # Возвращаем сотрудников текущего пользователя
-        return Employee.objects.filter(user=self.request.user)
+        return Employee.objects.filter(project__id = self.kwargs.get('project_pk'))
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['project_id'] = self.kwargs.get('project_pk')
+        return context
+
+    def perform_create(self, serializer):
+        serializer.save(project_id=self.kwargs.get('project_pk'))
+
+    def get_serializer(self, *args, **kwargs):
+        if self.action == 'update':
+            serializer_class = EmployeeUpdateSerializer
+            kwargs.setdefault('context', self.get_serializer_context())
+            return serializer_class(*args, **kwargs)
+        return super().get_serializer(*args, **kwargs)
