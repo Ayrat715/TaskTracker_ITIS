@@ -166,7 +166,6 @@ class Task(models.Model):
             return None
 
     def _prepare_lstm_input(self):
-        # Получаем завершённые задачи
         completed_tasks = Task.objects.filter(
             status__type='completed',
             start_time__isnull=False
@@ -175,7 +174,6 @@ class Task(models.Model):
         if not completed_tasks.exists():
             logger.warning("Нет завершенных задач для LSTM")
             return None
-        # Время первой задачи — базовая точка отсчёта
         base_time = completed_tasks.first().start_time
         features = extract_task_features(self, base_time)
         return [[features]]
@@ -195,6 +193,7 @@ class Comment(models.Model):
     body = models.TextField(null=True)
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
     task = models.ForeignKey(Task, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
 
 def assign_task_number(task):
     sprint_task = task.sprinttask_set.select_related('sprint').first()
