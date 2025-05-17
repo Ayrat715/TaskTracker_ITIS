@@ -64,20 +64,25 @@ class CategoryClassifier:
     def predict(self, task):
         if not self.model or not self.vectorizer:
             logger.warning("Попытка предсказания без загруженной модели или векторизатора")
-            return None
+            return None, 0.0
 
         name = task.name or ''
         desc = task.description or ''
         text = f"{name} {desc}".strip()
         if not text:
             logger.warning("Пустой текст задачи, пропуск предсказания")
-            return None
+            return None, 0.0
 
-        X = self.vectorizer.transform([text])
-        prediction = self.model.predict(X)
-        logger.info(f"Предсказана категория '{prediction[0]}' для задачи ID={task.id}")
-        return prediction[0]
-
+        try:
+            X = self.vectorizer.transform([text])
+            prediction = self.model.predict(X)
+            proba = self.model.predict_proba(X)[0]
+            confidence = max(proba)
+            logger.info(f"Предсказана категория '{prediction[0]}' с уверенностью {confidence:.2f} для задачи ID={task.id}")
+            return prediction[0], confidence
+        except Exception as e:
+            logger.error(f"Ошибка при предсказании: {e}")
+            return None, 0.0
 
 def keyword_matcher(task, categories):
     logger.info(f"Запуск keyword_matcher для задачи ID={task.id}")
