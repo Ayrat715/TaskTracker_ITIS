@@ -29,7 +29,7 @@
                     </tr>
                     </thead>
                     <tbody>
-                    <tr v-for="task in filteredTasks" :key="task.id">
+                    <tr v-for="task in filteredTasks" :key="task.id" @click="router().push(`/tasks/${task.id}`)">
                         <td class="favorite-col">
                             <i
                                 v-if="task.isCurrentUserExecutor"
@@ -75,6 +75,7 @@ import axios from "axios";
 import SearchInput from "@/components/SearchInput.vue";
 import CreateTaskBtn from "@/components/CreateTaskBtn.vue";
 import {useAuthStore} from "@/stores/auth";
+import router from "@/router";
 
 export default {
     components: {CreateTaskBtn, SearchInput, TaskDetailsModalComponent},
@@ -112,6 +113,9 @@ export default {
     },
 
     methods: {
+        router() {
+            return router
+        },
         async loadTasks() {
             this.loading = true;
             this.error = null;
@@ -125,9 +129,15 @@ export default {
                 }
 
                 const [executorsResponse, prioritiesResponse] = await Promise.all([
-                    axios.get(`http://localhost:8000/project/${this.currentProject.id}/employees/`),
+                    axios.get(`http://localhost:8000/project/${this.currentProject.id}/employees/`, {
+                        withCredentials: true,
+                    }),
                     axios.get('http://localhost:8000/task/priorities/')
                 ]);
+
+                const currentUserEmployeeIds = executorsResponse.data
+                    .filter(e => e.user === this.currentUser?.id)
+                    .map(e => e.id);
 
                 this.executorsMap = new Map(executorsResponse.data.map(e => [e.id, e]));
                 this.prioritiesMap = new Map(prioritiesResponse.data.map(p => [p.id, p]));
@@ -135,24 +145,22 @@ export default {
                 const sprintIds = this.allProjectSprints.map(sprint => sprint.id);
 
                 const response = await axios.get(`http://localhost:8000/task/tasks/`);
-
-
                 const projectTasks = response.data.filter(task => {
                     return task.sprint_ids && task.sprint_ids.some(sprintId => sprintIds.includes(sprintId))
                 });
 
                 this.tasks = projectTasks.map(task => ({
                     ...task,
-                    sprint: task.sprints_ids || [],
+                    sprint: task.sprint_ids || [],
                     executors: task.executor_ids?.length
                         ? task.executor_ids.map(id => this.executorsMap.get(id)).filter(Boolean)
                         : [],
                     priority: task.priority ? this.prioritiesMap.get(task.priority) : null,
                     status: this.getStatusName(task.status),
-                    isCurrentUserExecutor: task.executors?.some(executor =>
-                        executor.user_id === this.currentUser?.id)
+                    isCurrentUserExecutor: task.executor_ids?.some(executorId =>
+                        currentUserEmployeeIds.includes(executorId)
+                    )
                 }));
-
 
             } catch (error) {
                 console.error("Ошибка загрузки задач:", error);
@@ -255,12 +263,6 @@ export default {
     border-radius: 12px;
     font-size: 0.85em;
     font-weight: 500;
-}
-
-
-.bi-star-fill {
-    color: gold;
-    font-size: 1.2em;
 }
 
 .loading-message, .error-message, .empty-message {

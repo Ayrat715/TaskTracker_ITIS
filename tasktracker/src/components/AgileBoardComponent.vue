@@ -43,9 +43,13 @@
                         <TaskCardComponent
                             :task="task"
                             :data-id="task.id"
+                            :project-prefix="projectPrefix"
                             draggable="true"
                             @dragstart="onDragStart($event, task)"
+                            @click="router().push(`/tasks/${task.id}`)"
+
                         />
+
                     </template>
                 </draggable>
             </div>
@@ -70,6 +74,7 @@ import TaskCardComponent from "@/components/TaskCardComponent.vue";
 import AgileBoardHeader from "@/components/AgileBoardHeader.vue";
 import TaskDetailsModalComponent from "@/components/TaskDetailsModalComponent.vue";
 import {mapActions, mapState} from "pinia";
+import router from "@/router";
 
 export default {
     name: 'AgileBoard',
@@ -105,9 +110,20 @@ export default {
         await this.loadSprints()
     },
     computed: {
-        ...mapState(useProjectsStore, ['currentProject', 'projects'])
+        ...mapState(useProjectsStore, ['currentProject', 'projects']),
+        projectPrefix() {
+            if (!this.currentProject?.name) return 'TAS';
+            return this.currentProject.name
+                .slice(0, 3)
+                .toUpperCase()
+                .padEnd(3, ' ')
+                .replace(/\s/g, '');
+        }
     },
     methods: {
+        router() {
+            return router
+        },
         ...mapActions(useProjectsStore, ['setCurrentProject']),
         handleSearch(query) {
             this.searchQuery = query.toLowerCase();
@@ -127,10 +143,13 @@ export default {
                     return;
                 }
 
-                const response = await axios.get(`http://localhost:8000/task/tasks/?sprint=${this.currentSprint}`);
+                const response = await axios.get(`http://localhost:8000/task/tasks/`);
+
 
                 const [executorsResponse, prioritiesResponse] = await Promise.all([
-                    axios.get(`http://localhost:8000/project/${this.currentProject.id}/employees/`),
+                    axios.get(`http://localhost:8000/project/${this.currentProject.id}/employees/`, {
+                        withCredentials: true
+                    }),
                     axios.get('http://localhost:8000/task/priorities/')
                 ]);
 
@@ -154,7 +173,7 @@ export default {
             }
         },
         getStatusType(statusId) {
-            const statusStr = statusId.toString();
+            const statusStr = statusId;
             const status = this.taskStatuses.find(s => s.id.toString() === statusStr);
             return status ? status.type : 'planned';
         },

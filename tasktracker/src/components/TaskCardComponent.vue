@@ -1,15 +1,20 @@
 <template>
     <div class="task-card" @click="$emit('click')">
         <div class="task-header">
-            <span class="task-id">TAS-{{task.task_number}}</span>
+            <span class="task-id">{{ projectPrefix }}-{{ task.task_number }}</span>
             <h4 class="task-title">{{ task.name }}</h4>
         </div>
         <div class="task-footer">
             <div class="executors">
-                <span v-if="task.executors?.length">
-                    {{ task.executors.map(e => e.name).join(', ') }}
+                <span
+                    v-for="executor in task.executors"
+                    :key="executor.id"
+                    class="executor"
+                    @click.stop="goToUser(executor.user)"
+                >
+                    {{ executor.user_name }}
                 </span>
-                <span v-else>не определен</span>
+                <span v-if="!task.executors?.length">не определен</span>
             </div>
             <span class="priority">
                 <i class="bi bi-flag"></i>
@@ -24,6 +29,7 @@
 import {useAuthStore} from "@/stores/auth";
 import {useTasksStore} from '@/stores/tasks';
 import {onMounted} from "vue";
+import router from "@/router";
 
 export default {
     name: 'TaskCard',
@@ -41,13 +47,23 @@ export default {
         task: {
             type: Object,
             required: true
-        }
+        },
+        projectPrefix: {
+            type: String,
+            default: 'TASK'
+        },
     },
     methods: {
+        router() {
+            return router
+        },
         formatTime(timeString) {
             if (!timeString) return 'Без срока';
             const date = new Date(timeString);
             return date.toLocaleDateString('ru-RU');
+        },
+        goToUser(userId) {
+            this.$router.push({name: 'profile', params: {id: userId}});
         }
     },
 
@@ -126,4 +142,15 @@ export default {
 .time {
     font-style: italic;
 }
+.executor {
+    cursor: pointer;
+    transition: color 0.2s;
+    margin-right: 8px;
+}
+
+.executor:hover {
+    color: #6498F1;
+    text-decoration: underline;
+}
+
 </style>

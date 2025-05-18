@@ -5,7 +5,9 @@
                 <span class="page-title">Доски Agile</span>
                 <span class="divider">/</span>
                 <div class="project-selector" @click="toggleProjectsDropdown" v-if="authStore.user">
-                    <span class="project-name">{{ currentProject.name || 'Выберите проект' }}</span>
+                    <span class="project-name" @click="router().push(`/project/${currentProject.id}`)">{{
+                            currentProject.name || 'Выберите проект'
+                        }}</span>
                     <i class="bi"
                        :class="{'bi-chevron-down': !showProjectsDropdown, 'bi-chevron-up': showProjectsDropdown}"></i>
 
@@ -28,8 +30,11 @@
 
             <div class="search-box-container">
                 <div class="search-box">
-                    <input type="text" class="search-input" placeholder="Поиск задач..." v-model="searchQuery">
-                    <i class="bi bi-search"></i>
+                    <SearchInput
+                        v-model="searchQuery"
+                        placeholder="Поиск задач..."
+                        @search="handleSearch"
+                    />
                 </div>
             </div>
         </div>
@@ -86,9 +91,12 @@ import {debounce} from 'lodash';
 import axios from "axios";
 import {useAuthStore} from "@/stores/auth";
 import CreateTaskBtn from "@/components/CreateTaskBtn.vue";
+import SearchInput from "@/components/SearchInput.vue";
+import router from "@/router";
+
 
 export default {
-    components: {CreateTaskBtn},
+    components: {SearchInput, CreateTaskBtn},
     props: {
         currentProject: {
             type: Object,
@@ -141,6 +149,9 @@ export default {
         this.loadUserProjects();
     },
     methods: {
+        router() {
+            return router
+        },
         formatDate(dateString) {
             if (!dateString) return '';
             const date = new Date(dateString);
@@ -188,12 +199,10 @@ export default {
             this.loadingProjects = true;
             try {
                 const response = await axios.get(
-                    'http://localhost:8000/project/list/',
+                    'http://localhost:8000/project/',
                     {withCredentials: true}
                 );
-
                 this.userProjects = response.data || [];
-
             } catch (error) {
                 if (error.response?.status === 403) {
                     this.$router.push('/login');
@@ -448,6 +457,10 @@ export default {
     color: #2d3748;
 }
 
+.project-name:hover {
+    cursor: pointer;
+}
+
 
 .projects-dropdown::-webkit-scrollbar {
     width: 6px;
@@ -466,6 +479,4 @@ export default {
 .projects-dropdown::-webkit-scrollbar-thumb:hover {
     background: #a0aec0;
 }
-
-
 </style>
