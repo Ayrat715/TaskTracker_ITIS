@@ -194,3 +194,17 @@ class GroupUpdateSerializer(serializers.ModelSerializer):
             user = get_object_or_404(get_user_model(), id=user_id)
             user.groups.add(instance)
         return instance
+
+
+class GroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Group
+        fields = ['id', 'name']
+        read_only_fields = ['id']
+
+
+class UserDetailSerializer(UserSerializer):
+    groups = GroupSerializer(many=True, read_only=True)
+
+    class Meta(UserSerializer.Meta):
+        fields = UserSerializer.Meta.fields + ['name', 'groups']
