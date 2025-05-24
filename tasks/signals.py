@@ -7,14 +7,13 @@ from tasks.ml_category import keyword_matcher, CategoryClassifier
 from tasks.models import Task, TaskCategory
 logger = logging.getLogger(__name__)
 
-"""
 @receiver(post_save, sender=Task)
 def categorize_task(sender, instance, created, **kwargs):
-    
+    """
     Сигнал, который автоматически срабатывает после сохранения новой задачи.
     Производит попытку категоризации: сначала по ключевым словам,
     потом с помощью ML-классификатора, иначе создаёт новую категорию.
-    
+    """
     if not created:
         return
 
@@ -60,7 +59,6 @@ def categorize_task(sender, instance, created, **kwargs):
     task.category = new_category
     task.save()
     logger.info(f"Создана новая категория '{name}' для задачи ID={task.id}")
-"""
 
 
 @receiver(post_save, sender=Task)
