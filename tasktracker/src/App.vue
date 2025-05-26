@@ -12,16 +12,21 @@
                             <span>Настройки</span>
                         </router-link>
 
-                        <button class="nav-item create-btn" @click="showCreateMenu = !showCreateMenu">
+                        <button class="nav-item create-btn" @click="showCreateMenu = !showCreateMenu" >
                             <span class="icon-wrapper"><i class="bi bi-plus-lg"></i></span>
                             <span>Создать</span>
                         </button>
-
 
                         <router-link to="/projects" class="nav-item">
                             <span class="icon-wrapper"><img src="../src/assets/projects.png"></span>
                             <span>Проекты</span>
                         </router-link>
+
+                        <router-link to="/groups" class="nav-item">
+                            <span class="icon-wrapper"><i class="bi bi-people"></i></span>
+                            <span>Группы</span>
+                        </router-link>
+
 
                     </nav>
                 </div>
@@ -46,16 +51,21 @@
 
                 <main class="main-content">
                     <router-view></router-view>
+
                     <div class="create-menu-container" v-if="showCreateMenu">
                         <div class="create-menu" :style="createMenuStyle">
-                            <button @click="router().push('/task/create')">
+                            <button @click="goToTaskCreate">
                                 Задачу
                             </button>
-                            <button @click="router().push('/project/create')">
+                            <button @click="goToProjectCreate">
                                 Проект
+                            </button>
+                            <button @click="goToGroupCreate">
+                                Группу
                             </button>
                         </div>
                     </div>
+
 
                     <div class="profile-menu-container" v-if="showProfileMenu">
                         <div class="profile-menu" :style="profileMenuStyle">
@@ -126,10 +136,11 @@ export default {
             profileMenuStyle: {}
         };
     },
-    mounted() {
+    async mounted() {
         this.checkScreenSize();
         window.addEventListener('resize', this.checkScreenSize);
         document.addEventListener('click', this.handleClickOutside);
+
     },
     beforeUnmount() {
         document.removeEventListener('click', this.handleClickOutside);
@@ -181,8 +192,20 @@ export default {
 
 
         goToProfile() {
-            router.push("/profile/${this.userId}");
+            router.push(`/user/${this.authStore.user.id}`);
             this.showProfileMenu = false;
+        },
+        goToTaskCreate() {
+            router.push('/task/create');
+            this.showCreateMenu = false;
+        },
+        goToProjectCreate() {
+            router.push('/project/create');
+            this.showCreateMenu = false;
+        },
+        goToGroupCreate() {
+            router.push('/group/create');
+            this.showCreateMenu = false;
         },
 
         async logout() {
@@ -360,12 +383,13 @@ body {
     position: absolute;
     z-index: 1000;
 }
+
 .create-menu-container {
-  top: 10%; /* Позиционируем прямо под кнопкой */
+    top: 10%; /* Позиционируем прямо под кнопкой */
 }
 
 .profile-menu-container {
-  bottom: 10%;
+    bottom: 10%;
 }
 
 .create-menu,
@@ -525,7 +549,6 @@ body {
 }
 
 .nav-item:hover,
-.user-profile:hover,
 .create-btn:hover {
     background-color: #4A7BC8;
 }
@@ -682,6 +705,4 @@ body {
         display: none;
     }
 }
-
-
 </style>
