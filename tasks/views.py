@@ -1,3 +1,5 @@
+import json
+
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.http import Http404
@@ -94,7 +96,7 @@ class EmployeeRecommendation(APIView):
                                                       required=True)
         if serializer.is_valid():
             return Response(
-                recommend_employees(serializer),
+                json.dumps(recommend_employees(serializer)),
                 status=status.HTTP_200_OK
             )
         else:
