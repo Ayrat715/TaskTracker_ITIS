@@ -2,13 +2,18 @@
     <div class="error-page">
         <div class="error-content">
             <div class="error-icon">
-                <i class="bi bi-search"></i>
+                <i class="bi bi-wifi-off"></i>
             </div>
-            <h1>Страница не найдена</h1>
-            <p>Запрашиваемый ресурс не существует или был перемещен.</p>
+            <h1>Проблемы с подключением</h1>
+            <p>Не удалось установить соединение с сервером. Пожалуйста, проверьте:</p>
+            <ul class="error-list">
+                <li><i class="bi bi-check-circle"></i> Ваше интернет-подключение</li>
+                <li><i class="bi bi-check-circle"></i> Настройки сети и VPN</li>
+                <li><i class="bi bi-check-circle"></i> Работоспособность сервера</li>
+            </ul>
             <div class="error-actions">
-                <button class="app-button primary" @click="goBack">
-                    <i class="bi bi-arrow-left"></i> Назад
+                <button class="app-button primary" @click="reloadPage">
+                    <i class="bi bi-arrow-repeat"></i> Повторить попытку
                 </button>
                 <button class="app-button" @click="goHome">
                     <i class="bi bi-house"></i> На главную
@@ -21,8 +26,8 @@
 <script>
 export default {
     methods: {
-        goBack() {
-            this.$router.go(-2);
+        reloadPage() {
+            window.location.reload();
         },
         goHome() {
             this.$router.push({name: 'home'});
@@ -51,25 +56,41 @@ export default {
 
 .error-icon {
     font-size: 80px;
-    color: #6c757d;
+    color: #dc3545;
     margin-bottom: 25px;
-}
-
-.error-icon i {
-    opacity: 0.7;
 }
 
 h1 {
     font-size: 32px;
     color: #343a40;
-    margin-bottom: 15px;
+    margin-bottom: 20px;
 }
 
 p {
     font-size: 18px;
     color: #6c757d;
-    margin-bottom: 30px;
+    margin-bottom: 15px;
     line-height: 1.6;
+}
+
+.error-list {
+    text-align: left;
+    max-width: 400px;
+    margin: 0 auto 30px;
+    padding-left: 20px;
+    color: #495057;
+}
+
+.error-list li {
+    margin-bottom: 10px;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.error-list i {
+    color: #198754;
 }
 
 .error-actions {
@@ -80,7 +101,7 @@ p {
 }
 
 .app-button {
-    min-width: 150px;
+    min-width: 180px;
     padding: 12px 20px;
     border-radius: 8px;
     font-size: 16px;

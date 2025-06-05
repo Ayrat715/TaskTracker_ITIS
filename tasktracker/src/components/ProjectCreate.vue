@@ -82,6 +82,7 @@ import {mapActions} from 'pinia'
 import {useProjectsStore} from '@/stores/projects'
 import axios from "axios"
 import {useAuthStore} from "@/stores/auth";
+import {useErrorHandling} from "@/utils/ErrorHandling";
 
 export default {
     data() {
@@ -102,6 +103,10 @@ export default {
         await this.authStore.checkAuth()
         await this.fetchUserGroups()
     },
+    setup() {
+        const {handleApiError} = useErrorHandling();
+        return {handleApiError};
+    },
 
     methods: {
         ...mapActions(useProjectsStore, ['fetchProjects']),
@@ -115,6 +120,7 @@ export default {
                 group.users.includes(this.authStore.user?.id)
             )
             } catch (error) {
+                this.handleApiError(error);
                 console.error('Ошибка загрузки групп:', error)
                 this.error = 'Не удалось загрузить список групп'
             }
@@ -126,7 +132,6 @@ export default {
             try {
                 this.error = null
 
-                // Валидация
                 if (!this.formData.name.trim()) {
                     throw new Error('Название проекта обязательно')
                 }
@@ -155,6 +160,7 @@ export default {
                 await this.fetchProjects()
                 this.$router.push('/projects')
             } catch (error) {
+                this.handleApiError(error);
                 console.error('Ошибка создания проекта:', error)
                 this.error = this.getErrorMessage(error)
             } finally {

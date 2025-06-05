@@ -12,7 +12,11 @@ export const useAuthStore = defineStore('auth', {
                 const response = await axios.get('http://localhost:8000/account/user/', {
                     withCredentials: true,
                 });
-                this.user = response.data;
+                const id = response.data.id;
+                const response2 = await axios.get(`http://localhost:8000/account/users/${id}`, {
+                    withCredentials: true,
+                });
+                this.user = response2.data;
                 this.isAuthenticated = true;
                 return true;
             } catch (error) {

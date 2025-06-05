@@ -65,8 +65,8 @@
                         <i class="bi bi-folder"></i>
                         {{ project.name }}
                     </td>
-                    <td>{{ formatDate(project.start_time) }}</td>
-                    <td>{{ formatDate(project.end_time) }}</td>
+                    <td>{{ formatDate(project.start_time) || "Не указано"}}</td>
+                    <td>{{ formatDate(project.end_time) || "Не указано"}}</td>
                     <td>
               <span class="status-badge" :class="getStatusClass(project)">
                 {{ getProjectStatus(project) }}
@@ -82,6 +82,7 @@
 <script>
 import axios from 'axios'
 import SearchInput from "@/components/SearchInput.vue";
+import {useErrorHandling} from "@/utils/ErrorHandling";
 
 export default {
     components: {SearchInput},
@@ -118,6 +119,10 @@ export default {
     async mounted() {
         this.loadUserProjects();
     },
+    setup() {
+        const {handleApiError} = useErrorHandling();
+        return {handleApiError};
+    },
     methods: {
         async loadUserProjects() {
             this.loading = true;
@@ -128,6 +133,7 @@ export default {
                 );
                 this.projects = response.data || [];
             } catch (error) {
+                this.handleApiError(error);
                 if (error.response?.status === 403) {
                     this.$router.push('/login');
                 } else {

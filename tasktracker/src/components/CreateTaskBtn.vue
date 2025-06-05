@@ -1,16 +1,26 @@
 <template>
     <button class="new-task-btn" @click="createNewTask">
-        Новая задача
+        <slot>Новая задача</slot>
     </button>
 </template>
 
 <script>
 export default {
     name: "CreateTaskBtn",
+    props: {
+        onClick: {
+            type: Function,
+            default: null
+        }
+    },
     methods:{
         createNewTask() {
-            this.$router.push('/task/create');
-        },
+            if (this.onClick) {
+                this.onClick();
+            } else {
+                this.$router.push('/task/create');
+            }
+        }
     }
 
 }

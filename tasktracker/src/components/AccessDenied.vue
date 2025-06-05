@@ -2,10 +2,11 @@
     <div class="error-page">
         <div class="error-content">
             <div class="error-icon">
-                <i class="bi bi-search"></i>
+                <i class="bi bi-lock"></i>
             </div>
-            <h1>Страница не найдена</h1>
-            <p>Запрашиваемый ресурс не существует или был перемещен.</p>
+            <h1>Доступ запрещен</h1>
+            <p>У вас нет прав для просмотра этого ресурса.</p>
+            <p class="small-text">Если вы считаете, что это ошибка, обратитесь к администратору.</p>
             <div class="error-actions">
                 <button class="app-button primary" @click="goBack">
                     <i class="bi bi-arrow-left"></i> Назад
@@ -51,12 +52,8 @@ export default {
 
 .error-icon {
     font-size: 80px;
-    color: #6c757d;
+    color: #dc3545;
     margin-bottom: 25px;
-}
-
-.error-icon i {
-    opacity: 0.7;
 }
 
 h1 {
@@ -68,8 +65,14 @@ h1 {
 p {
     font-size: 18px;
     color: #6c757d;
-    margin-bottom: 30px;
+    margin-bottom: 10px;
     line-height: 1.6;
+}
+
+.small-text {
+    font-size: 14px;
+    color: #868e96;
+    margin-top: 20px;
 }
 
 .error-actions {
@@ -77,6 +80,7 @@ p {
     gap: 15px;
     justify-content: center;
     flex-wrap: wrap;
+    margin-top: 25px;
 }
 
 .app-button {

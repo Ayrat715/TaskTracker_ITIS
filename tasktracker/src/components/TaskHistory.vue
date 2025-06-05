@@ -58,17 +58,10 @@
             </div>
         </div>
 
-        <TaskDetailsModalComponent
-            v-if="selectedTask"
-            :task="selectedTask"
-            @close="selectedTask = null"
-            @save="saveTask"
-        />
     </div>
 </template>
 
 <script>
-import TaskDetailsModalComponent from "@/components/TaskDetailsModalComponent.vue";
 import {mapState} from "pinia";
 import {useProjectsStore} from "@/stores/projects";
 import axios from "axios";
@@ -76,9 +69,10 @@ import SearchInput from "@/components/SearchInput.vue";
 import CreateTaskBtn from "@/components/CreateTaskBtn.vue";
 import {useAuthStore} from "@/stores/auth";
 import router from "@/router";
+import {useErrorHandling} from "@/utils/ErrorHandling";
 
 export default {
-    components: {CreateTaskBtn, SearchInput, TaskDetailsModalComponent},
+    components: {CreateTaskBtn, SearchInput},
 
     data() {
         return {
@@ -110,6 +104,14 @@ export default {
             }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
         },
 
+    },
+    setup() {
+        const {handleApiError} = useErrorHandling();
+        return {handleApiError};
+    },
+    mounted() {
+        this.loadTasks();
+        this.loadStatuses();
     },
 
     methods: {
@@ -163,6 +165,7 @@ export default {
                 }));
 
             } catch (error) {
+                this.handleApiError(error);
                 console.error("Ошибка загрузки задач:", error);
                 this.error = "Не удалось загрузить задачи";
                 this.tasks = [];
@@ -180,6 +183,7 @@ export default {
                     sprint.project === this.currentProject.id
                 );
             } catch (error) {
+                this.handleApiError(error);
                 console.error('Ошибка при загрузке спринтов:', error);
                 this.currentSprint = null;
                 this.allProjectSprints = [];
@@ -194,34 +198,16 @@ export default {
                     return map;
                 }, {});
             } catch (error) {
+                this.handleApiError(error);
                 console.error('Ошибка при загрузке статусов:', error);
             }
         },
 
         getStatusName(statusId) {
             return this.statusMap[statusId] || statusId;
-        },
-
-        openTaskDetails(task) {
-            this.selectedTask = {...task};
-        },
-
-        async saveTask(updatedTask) {
-            try {
-                await axios.put(`http://localhost:8000/task/tasks/${updatedTask.id}/`, updatedTask);
-                await this.loadTasks();
-                this.selectedTask = null;
-            } catch (error) {
-                console.error("Ошибка сохранения задачи:", error);
-            }
-        },
+        }
 
 
-    },
-
-    mounted() {
-        this.loadTasks();
-        this.loadStatuses();
     },
 
 };

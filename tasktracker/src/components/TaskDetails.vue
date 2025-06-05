@@ -72,7 +72,7 @@
                         <div class="detail-item">
                             <label>Автор</label>
                             <span class="author" @click.stop="goToUser(task.author?.user)">
-                                {{task.author?.user_name }}
+                                {{ task.author?.user_name }}
                             </span>
                         </div>
 
@@ -129,6 +129,7 @@ import axios from 'axios'
 import {useProjectsStore} from "@/stores/projects";
 import CreateTaskBtn from "@/components/CreateTaskBtn.vue";
 import SearchInput from "@/components/SearchInput.vue";
+import {useErrorHandling} from "@/utils/ErrorHandling";
 
 export default {
     name: 'TaskDetailsPage',
@@ -152,12 +153,7 @@ export default {
         },
         '$route.params.id': {
             immediate: true,
-            handler(newId) {
-                if (newId) {
-                    this.resetTaskState();
-                    this.loadTask();
-                }
-            }
+
         }
     },
     async mounted() {
@@ -171,6 +167,10 @@ export default {
     },
     beforeUnmount() {
         document.removeEventListener('click', this.handleClickOutside);
+    },
+    setup() {
+        const {handleApiError} = useErrorHandling();
+        return {handleApiError};
     },
     computed: {
         sprintsNames() {
@@ -202,14 +202,38 @@ export default {
 
                 const taskResponse = await axios.get(`http://localhost:8000/task/tasks/${this.$route.params.id}/`);
 
-                const [sprintsRes, executorsRes, prioritiesRes, statusesRes] = await Promise.all([
-                    axios.get(`http://localhost:8000/task/sprints/`),
-                    axios.get(`http://localhost:8000/project/${this.currentProject.id}/employees/`, {
+                if (!taskResponse.data.sprint_ids || taskResponse.data.sprint_ids.length === 0) {
+                    const error = new Error('Задача не привязана к спринту');
+                    error.response = {status: 404};
+                    throw error;
+                }
+
+                const firstSprintId = taskResponse.data.sprint_ids[1];
+
+                const sprintsResponse = await axios.get(`http://localhost:8000/task/sprints/`);
+                const sprint = sprintsResponse.data.find(s => s.id === firstSprintId);
+                if (!sprint) {
+                    const error = new Error('Спринт не найден');
+                    error.response = {status: 404};
+                    throw error;
+                }
+                const projectId = sprint.project;
+
+
+                const [executorsRes, prioritiesRes, statusesRes, sprintsRes] = await Promise.all([
+                    axios.get(`http://localhost:8000/project/${projectId}/employees/`, {
                         withCredentials: true,
                     }),
                     axios.get('http://localhost:8000/task/priorities/'),
-                    axios.get('http://localhost:8000/task/statuses/')
+                    axios.get('http://localhost:8000/task/statuses/'),
+                    axios.get(`http://localhost:8000/task/sprints/`)
                 ]);
+                 if ((await executorsRes).status === 403) {
+                    const error = new Error('Access denied to project');
+                    error.response = {status: 403};
+                    throw error;
+                }
+
 
                 const sprintsMap = new Map(sprintsRes.data.map(s => [s.id, s]));
                 const executorsMap = new Map(executorsRes.data.map(e => [e.id, e]));
@@ -226,12 +250,19 @@ export default {
                         : [],
                     priority: taskResponse.data.priority ? prioritiesMap.get(taskResponse.data.priority) : null,
                     status: taskResponse.data.status ? statusesMap.get(taskResponse.data.status) : null,
-                    author: taskResponse.data.author ? executorsMap.get(taskResponse.data.author) : null
+                    author: taskResponse.data.author ? executorsMap.get(taskResponse.data.author) : null,
+                    projectId
                 };
 
             } catch (error) {
+                this.handleApiError(error);
                 console.error('Ошибка загрузки задачи:', error);
-                this.error = 'Не удалось загрузить задачу';
+
+                if (error.message === 'Задача не привязана к спринту') {
+                    this.error = 'Задача не привязана к спринту. Невозможно определить проект.';
+                } else {
+                    this.error = 'Не удалось загрузить задачу';
+                }
             }
         },
 
@@ -254,33 +285,7 @@ export default {
             if (!dateString) return null
             return new Date(dateString).toLocaleDateString('ru-RU')
         },
-        async loadStatuses() {
-            try {
-                const response = await axios.get('http://localhost:8000/task/statuses/')
-                this.taskStatuses = response.data
 
-                this.columns = this.taskStatuses.map(status => ({
-                    id: status.id.toString(),
-                    title: status.type,
-                    apiStatus: status.type
-                }))
-            } catch (error) {
-                console.error('Ошибка при загрузке статусов:', error)
-            }
-        },
-        getStatusType(statusId) {
-            const statusStr = statusId.toString();
-            const status = this.taskStatuses.find(s => s.id.toString() === statusStr);
-            return status ? status.type : 'planned';
-        },
-        // async loadProjectTasks() {
-        //     try {
-        //         const response = await axios.get(`http://localhost:8000/task/tasks/`);
-        //         this.allTasks = response.data;
-        //     } catch (error) {
-        //         console.error('Ошибка загрузки задач:', error);
-        //     }
-        // },
         async loadProjectTasks() {
             try {
                 const response = await axios.get(`http://localhost:8000/task/tasks/`);
@@ -296,6 +301,7 @@ export default {
 
 
             } catch (error) {
+                this.handleApiError(error);
                 console.error('Ошибка загрузки задач:', error);
                 this.allTasks = [];
             }
@@ -303,7 +309,6 @@ export default {
 
         async loadSprints() {
             try {
-                // 1. Проверяем наличие текущего проекта
                 if (!this.currentProject?.id) {
                     console.log('Проект не выбран, загрузка спринтов пропущена');
                     this.sprints = [];
@@ -311,21 +316,17 @@ export default {
                     return;
                 }
 
-                // 2. Загружаем все спринты с сервера
                 const response = await axios.get('http://localhost:8000/task/sprints/');
                 const allSprints = response.data;
 
-                // 3. Фильтруем спринты по текущему проекту
                 this.sprints = allSprints.filter(sprint =>
                     sprint.project === this.currentProject.id
                 );
 
-                // 4. Сортируем спринты по дате начала (новые сначала)
                 this.sprints.sort((a, b) =>
                     new Date(b.start_time) - new Date(a.start_time)
                 );
 
-                // 5. Выбираем текущий спринт
                 const projectsStore = useProjectsStore();
                 let selectedSprint = projectsStore.currentSprint;
 
@@ -341,18 +342,15 @@ export default {
                     }
                 }
 
-                // 6. Автовыбор спринта если не выбран
                 if (!selectedSprint && this.sprints.length > 0) {
                     const now = new Date();
 
-                    // Ищем активный спринт (текущая дата внутри периода спринта)
                     selectedSprint = this.sprints.find(sprint => {
                         const start = new Date(sprint.start_time);
                         const end = new Date(sprint.end_time);
                         return start <= now && now <= end;
                     });
 
-                    // Если активного нет - берём первый в списке (последний созданный)
                     if (!selectedSprint) {
                         selectedSprint = this.sprints[0];
                     }
@@ -360,10 +358,8 @@ export default {
                     projectsStore.setCurrentSprint(selectedSprint);
                 }
 
-                // 7. Обновляем ID текущего спринта
                 this.currentSprint = selectedSprint?.id || null;
 
-                // 8. Перезагружаем задачи для выбранного спринта
                 if (this.currentSprint) {
                     await this.loadProjectTasks();
                 } else {
@@ -371,11 +367,11 @@ export default {
                 }
 
             } catch (error) {
+                this.handleApiError(error);
                 console.error('Ошибка при загрузке спринтов:', error);
                 this.sprints = [];
                 this.currentSprint = null;
 
-                // Сбрасываем спринт в хранилище
                 const projectsStore = useProjectsStore();
                 projectsStore.setCurrentSprint(null);
             }
@@ -614,6 +610,7 @@ export default {
     cursor: pointer;
     transition: color 0.2s;
 }
+
 .executor {
     cursor: pointer;
     transition: color 0.2s;
