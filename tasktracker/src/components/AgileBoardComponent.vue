@@ -1,6 +1,5 @@
 <template>
     <div class="agile-board">
-
         <AgileBoardHeader
             :current-project="currentProject || {}"
             :sprints="sprints"
@@ -54,15 +53,8 @@
                 </draggable>
             </div>
         </div>
-
-        <TaskDetailsModalComponent
-            v-if="selectedTask"
-            :task="selectedTask"
-            :sprints="sprints"
-            @close="selectedTask = null"
-            @save="saveTask"
-        />
     </div>
+
 </template>
 
 <script>
@@ -72,13 +64,13 @@ import {useAuthStore} from '@/stores/auth'
 import {useProjectsStore} from '@/stores/projects'
 import TaskCardComponent from "@/components/TaskCardComponent.vue";
 import AgileBoardHeader from "@/components/AgileBoardHeader.vue";
-import TaskDetailsModalComponent from "@/components/TaskDetailsModalComponent.vue";
 import {mapActions, mapState} from "pinia";
 import router from "@/router";
+import {useErrorHandling} from "@/utils/ErrorHandling";
 
 export default {
     name: 'AgileBoard',
-    components: {draggable, AgileBoardHeader, TaskCardComponent, TaskDetailsModalComponent},
+    components: {draggable, AgileBoardHeader, TaskCardComponent},
     data() {
         return {
             sprints: [],
@@ -106,8 +98,11 @@ export default {
 
         await this.loadStatuses()
         await this.loadPriorities()
-        // this.loadCategories()
         await this.loadSprints()
+    },
+    setup() {
+        const {handleApiError} = useErrorHandling();
+        return {handleApiError};
     },
     computed: {
         ...mapState(useProjectsStore, ['currentProject', 'projects']),
@@ -118,7 +113,7 @@ export default {
                 .toUpperCase()
                 .padEnd(3, ' ')
                 .replace(/\s/g, '');
-        }
+        },
     },
     methods: {
         router() {
@@ -168,6 +163,7 @@ export default {
                 }));
                 this.tasks = [...this.allTasks];
             } catch (error) {
+                this.handleApiError(error);
                 console.error('Ошибка при загрузке задач:', error);
                 this.tasks = [];
             }
@@ -210,6 +206,7 @@ export default {
 
                     task.status = column.apiStatus;
                 } catch (error) {
+                    this.handleApiError(error);
                     console.error('Ошибка при обновлении статуса задачи:', error);
                 }
             }
@@ -231,8 +228,9 @@ export default {
                 if (task) task.status = newStatus;
 
             } catch (error) {
+                this.handleApiError(error);
                 console.error('Ошибка при обновлении статуса задачи:', error);
-                await this.loadTasks();
+                this.loadTasks();
             }
         },
 
@@ -241,7 +239,9 @@ export default {
                 const response = await axios.get('http://localhost:8000/task/priorities/')
                 this.priorities = response.data
             } catch (error) {
+                this.handleApiError(error);
                 console.error('Ошибка при загрузке приоритетов:', error)
+
             }
         },
         async loadStatuses() {
@@ -255,6 +255,7 @@ export default {
                     apiStatus: status.type
                 }))
             } catch (error) {
+                this.handleApiError(error);
                 console.error('Ошибка при загрузке статусов:', error)
             }
         },
@@ -304,6 +305,7 @@ export default {
                     this.currentSprint = null;
                 }
             } catch (error) {
+                this.handleApiError(error);
                 console.error('Ошибка при загрузке спринтов:', error);
                 this.currentSprint = null;
             }
@@ -317,9 +319,6 @@ export default {
 
                 return inCurrentSprint && statusMatches;
             });
-        },
-        openTaskDetails(task) {
-            this.selectedTask = {...task}
         },
         async saveTask(taskData) {
             try {
@@ -362,6 +361,7 @@ export default {
                 await this.loadTasks()
                 this.selectedTask = null
             } catch (error) {
+                this.handleApiError(error,);
                 console.error('Ошибка при сохранении задачи:', error)
                 if (error.response) {
                     if (error.response.status === 403) {
@@ -506,5 +506,4 @@ export default {
     flex-grow: 1;
     overflow-y: auto;
 }
-
 </style>

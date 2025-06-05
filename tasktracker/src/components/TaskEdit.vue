@@ -147,6 +147,7 @@
 import axios from 'axios'
 import Multiselect from 'vue-multiselect'
 import {useProjectsStore} from "@/stores/projects"
+import {useErrorHandling} from "@/utils/ErrorHandling";
 
 export default {
     components: {Multiselect},
@@ -186,12 +187,33 @@ export default {
         ])
         this.loadTask()
     },
+    setup() {
+        const {handleApiError} = useErrorHandling();
+        return {handleApiError};
+    },
     methods: {
         async loadTask() {
             try {
                 const response = await axios.get(
                     `http://localhost:8000/task/tasks/${this.$route.params.id}/`
                 )
+                const firstSprintId = response.data.sprint_ids[1];
+                const sprintsResponse = await axios.get(`http://localhost:8000/task/sprints/`);
+                const sprint = sprintsResponse.data.find(s => s.id === firstSprintId);
+                if (!sprint) {
+                    const error = new Error('Спринт не найден');
+                    error.response = {status: 404};
+                    throw error;
+                }
+                const projectId = sprint.project;
+                const executorsRes = axios.get(`http://localhost:8000/project/${projectId}/employees/`, {
+                    withCredentials: true,
+                })
+                if ((await executorsRes).status === 403) {
+                    const error = new Error('Access denied to project');
+                    error.response = {status: 403};
+                    throw error;
+                }
                 this.formData = response.data
 
                 if (this.formData.sprint_ids) {
@@ -206,6 +228,7 @@ export default {
                     )
                 }
             } catch (error) {
+                this.handleApiError(error);
                 this.error = 'Не удалось загрузить данные задачи'
             }
         },
@@ -215,6 +238,7 @@ export default {
                 const response = await axios.get('http://localhost:8000/task/statuses/')
                 this.statuses = response.data
             } catch (error) {
+                this.handleApiError(error);
                 console.error('Ошибка загрузки статусов:', error)
             }
         },
@@ -224,6 +248,7 @@ export default {
                 const response = await axios.get('http://localhost:8000/task/priorities/')
                 this.priorities = response.data
             } catch (error) {
+                this.handleApiError(error);
                 console.error('Ошибка загрузки приоритетов:', error)
             }
         },
@@ -236,6 +261,7 @@ export default {
                 )
                 this.employees = response.data
             } catch (error) {
+                this.handleApiError(error);
                 console.error('Ошибка загрузки сотрудников:', error)
             }
         },
@@ -247,6 +273,7 @@ export default {
                     .filter(sprint => sprint.project === this.currentProject.id)
                     .sort((a, b) => new Date(b.start_time) - new Date(a.start_time))
             } catch (error) {
+                this.handleApiError(error);
                 console.error('Ошибка загрузки спринтов:', error)
             }
         },
@@ -269,6 +296,7 @@ export default {
 
                 this.$router.push(`/tasks/${this.$route.params.id}`)
             } catch (error) {
+                this.handleApiError(error);
                 this.error = this.getErrorMessage(error)
                 console.error('Детали ошибки:', error.response?.data)
             } finally {
@@ -433,7 +461,6 @@ textarea.form-control {
     gap: 0.5rem;
 }
 
-/* Кастомизация multiselect */
 ::v-deep .multiselect {
     border: 1px solid #dfe1e6;
     border-radius: 3px;
@@ -483,11 +510,11 @@ textarea.form-control {
 }
 
 ::v-deep .multiselect__option {
-    padding: 12px 16px ; /* Увеличиваем отступы */
-    width: 100%; /* Занимаем всю ширину */
+    padding: 12px 16px;
+    width: 100%;
     box-sizing: border-box;
     transition: all 0.2s;
-    display: flex ; /* Для правильного выравнивания */
+    display: flex;
     align-items: center;
 }
 
@@ -498,7 +525,7 @@ textarea.form-control {
 }
 
 ::v-deep .multiselect__content-wrapper {
-    width: 100% ;
+    width: 100%;
     min-width: 100%;
     max-width: 100%;
     box-sizing: border-box;
@@ -510,8 +537,8 @@ textarea.form-control {
 }
 
 ::v-deep .multiselect__content {
-    min-width: 100% ;
-    max-width: 100% ;
+    min-width: 100%;
+    max-width: 100%;
     white-space: normal;
     list-style: none;
     padding-left: 0;
@@ -543,17 +570,17 @@ textarea.form-control {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    min-height: 40px; /* Фиксированная высота контейнера */
+    min-height: 40px;
     padding: 4px 40px 0 12px;
 }
 
 ::v-deep .multiselect__tag {
     margin: 2px 4px 2px 0;
-    align-self: center; /* Выравнивание тегов по центру */
+    align-self: center;
 }
 
 ::v-deep .multiselect__placeholder {
-    align-self: center; /* Выравнивание плейсхолдера */
+    align-self: center;
     margin-top: 0;
     padding: 4px 0;
 }

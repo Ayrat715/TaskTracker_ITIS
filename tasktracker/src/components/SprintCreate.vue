@@ -1,40 +1,26 @@
 <template>
-    <div class="create-project-page">
-        <h2>Создание нового проекта</h2>
-        <form @submit.prevent="submitForm" class="project-form">
+    <div class="create-sprint-page">
+        <h2>Создание нового спринта</h2>
+        <form @submit.prevent="submitForm" class="sprint-form">
             <div class="form-group">
-                <label>Название проекта *</label>
+                <label>Название спринта *</label>
                 <input
                     type="text"
                     v-model="formData.name"
                     required
                     class="form-control"
-                    placeholder="Введите название проекта"
+                    placeholder="Введите название спринта"
                 >
             </div>
 
             <div class="form-group">
-                <label>Описание проекта</label>
+                <label>Описание спринта</label>
                 <textarea
                     v-model="formData.description"
                     class="form-control"
                     rows="3"
-                    placeholder="Введите описание проекта"
+                    placeholder="Введите описание спринта"
                 ></textarea>
-            </div>
-
-            <div class="form-group">
-                <label>Группа проекта *</label>
-                <select
-                    v-model="formData.group"
-                    required
-                    class="form-control"
-
-                >
-                    <option v-for="group in groups" :value="group.id" :key="group.id">
-                        {{ group.name }}
-                    </option>
-                </select>
             </div>
 
             <div class="form-row">
@@ -60,12 +46,16 @@
                 </div>
             </div>
 
+            <div class="current-project" v-if="currentProject">
+                Спринт будет создан в проекте: <strong>{{ currentProject.name }}</strong>
+            </div>
+
             <div class="form-actions">
                 <button
                     type="submit"
                     class="btn btn-primary"
                 >
-                    {{ 'Создать проект' }}
+                    Создать спринт
                 </button>
                 <button type="button" @click="cancel" class="btn btn-secondary">Отмена</button>
             </div>
@@ -78,8 +68,6 @@
 </template>
 
 <script>
-import {mapActions} from 'pinia'
-import {useProjectsStore} from '@/stores/projects'
 import axios from "axios"
 import {useAuthStore} from "@/stores/auth";
 import {useErrorHandling} from "@/utils/ErrorHandling";
@@ -88,11 +76,12 @@ export default {
     data() {
         return {
             error: null,
-            groups: [],
+            currentProject: null,
+            projects: [],
             formData: {
                 name: '',
                 description: '',
-                group: null,
+                project: null,
                 start_time: '',
                 end_time: ''
             },
@@ -101,42 +90,51 @@ export default {
     },
     async created() {
         await this.authStore.checkAuth()
-        await this.fetchUserGroups()
+        await this.loadProjectData();
     },
     setup() {
         const {handleApiError} = useErrorHandling();
         return {handleApiError};
     },
-
     methods: {
-        ...mapActions(useProjectsStore, ['fetchProjects']),
-
-        async fetchUserGroups() {
-            try {
-                const response = await axios.get('http://localhost:8000/account/groups/', {
-                    withCredentials: true
-                })
-                this.groups = response.data.filter(group =>
-                group.users.includes(this.authStore.user?.id)
-            )
-            } catch (error) {
-                this.handleApiError(error);
-                console.error('Ошибка загрузки групп:', error)
-                this.error = 'Не удалось загрузить список групп'
-            }
-        },
         cancel() {
             this.$router.go(-1)
         },
+
+        async loadProjectData() {
+            try {
+                const projectId = this.$route.params.id;
+                if (!projectId) {
+                    this.error = 'Проект не указан';
+                    return;
+                }
+
+                const response = await axios.get(`http://localhost:8000/project/${projectId}/`, {
+                    withCredentials: true
+                });
+
+                this.currentProject = response.data;
+                this.formData.project = this.currentProject.id;
+
+            } catch (error) {
+                this.handleApiError(error);
+                console.error('Ошибка загрузки проекта:', error);
+                this.error = 'Не удалось загрузить данные проекта';
+            }
+        },
+
         async submitForm() {
             try {
+                if (!this.formData.project) {
+                    throw new Error('Проект не найден');
+                }
                 this.error = null
 
                 if (!this.formData.name.trim()) {
-                    throw new Error('Название проекта обязательно')
+                    throw new Error('Название спринта обязательно')
                 }
-                if (!this.formData.group) {
-                    throw new Error('Выберите группу проекта')
+                if (!this.formData.project) {
+                    throw new Error('Выберите проект')
                 }
                 if (new Date(this.formData.start_time) > new Date(this.formData.end_time)) {
                     throw new Error('Дата окончания должна быть после даты начала')
@@ -145,28 +143,26 @@ export default {
                 const payload = {
                     name: this.formData.name,
                     description: this.formData.description,
-                    group: this.formData.group,
+                    project: this.formData.project,
                     start_time: this.formData.start_time,
                     end_time: this.formData.end_time
                 }
 
-                await axios.post('http://localhost:8000/project/', payload, {
+                await axios.post('http://localhost:8000/task/sprints/', payload, {
                     withCredentials: true,
                     headers: {
                         'X-CSRFToken': this.getCookie('csrftoken')
                     }
                 })
 
-                await this.fetchProjects()
-                this.$router.push('/projects')
+                this.$router.push(`/project/${this.formData.project}`)
             } catch (error) {
                 this.handleApiError(error);
-                console.error('Ошибка создания проекта:', error)
+                console.error('Ошибка создания спринта:', error)
                 this.error = this.getErrorMessage(error)
-            } finally {
-                this.loading = false
             }
         },
+
         getCookie(name) {
             const value = `; ${document.cookie}`
             const parts = value.split(`; ${name}=`)
@@ -176,7 +172,7 @@ export default {
         getErrorMessage(error) {
             if (error.response) {
                 if (error.response.status === 400) {
-                    return error.response.data?.detail || 'Некорректные данные проекта'
+                    return error.response.data?.detail || 'Некорректные данные спринта'
                 }
                 if (error.response.status === 403) {
                     return 'Ошибка доступа'
@@ -189,13 +185,13 @@ export default {
 </script>
 
 <style scoped>
-.create-project-page {
+.create-sprint-page {
     max-width: 800px;
     margin: 20px auto;
     padding: 20px;
 }
 
-.project-form {
+.sprint-form {
     display: flex;
     flex-direction: column;
     gap: 20px;

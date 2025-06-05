@@ -107,6 +107,7 @@
 <script>
 import axios from 'axios'
 import {useAuthStore} from '@/stores/auth'
+import {useErrorHandling} from "@/utils/ErrorHandling";
 
 export default {
     data() {
@@ -132,6 +133,10 @@ export default {
         await this.fetchProjectData()
         await this.fetchUserGroups()
     },
+    setup() {
+        const {handleApiError} = useErrorHandling();
+        return {handleApiError};
+    },
     methods: {
         async fetchProjectData() {
             try {
@@ -147,6 +152,7 @@ export default {
                     end_time: response.data.end_time.split('T')[0]
                 }
             } catch (error) {
+                this.handleApiError(error);
                 this.error = 'Не удалось загрузить данные проекта'
             }
         },
@@ -161,6 +167,7 @@ export default {
                 this.groups = response.data.filter(group =>
                     group.users.includes(authStore.user?.id))
             } catch (error) {
+                this.handleApiError(error);
                 console.error('Ошибка загрузки групп:', error)
                 this.error = 'Не удалось загрузить список групп'
             }
@@ -171,7 +178,6 @@ export default {
                 this.loading = true
                 this.error = null
 
-                // Валидация
                 if (new Date(this.formData.start_time) > new Date(this.formData.end_time)) {
                     throw new Error('Дата окончания должна быть позже даты начала')
                 }
@@ -195,6 +201,7 @@ export default {
 
                 this.$router.push(`/project/${this.projectId}`)
             } catch (error) {
+                this.handleApiError(error);
                 this.error = this.getErrorMessage(error)
             } finally {
                 this.loading = false
@@ -214,6 +221,7 @@ export default {
                     }),
                 this.$router.push('/projects')
             } catch (error) {
+                this.handleApiError(error);
                 this.error = 'Ошибка при удалении проекта'
             }
         },

@@ -4,7 +4,6 @@
             <h2>Профиль пользователя
                 <span v-if="isCurrentUser" class="edit-button">
                     <button @click="editProfile" class="edit-btn"><i class="bi bi-pencil"></i></button>
-                    <button @click="deleteProfile" class="delete-btn"><i class="bi bi-trash3"></i></button>
                 </span>
             </h2>
         </div>
@@ -43,6 +42,7 @@
 <script>
 import axios from "axios";
 import {useAuthStore} from '@/stores/auth';
+import {useErrorHandling} from "@/utils/ErrorHandling";
 
 export default {
     name: 'UserProfile',
@@ -69,6 +69,10 @@ export default {
             immediate: true
         }
     },
+    setup() {
+        const {handleApiError} = useErrorHandling();
+        return {handleApiError};
+    },
     methods: {
         editProfile() {
             this.$router.push(`/user/${this.authStore.user?.id}/edit`)
@@ -86,14 +90,11 @@ export default {
                 this.userData = response.data;
                 this.groups = response.data.groups || [];
             } catch (error) {
+                this.handleApiError(error);
                 this.error = this.getErrorMessage(error);
             } finally {
                 this.loading = false;
             }
-        },
-        formatDate(dateString) {
-            if (!dateString) return '';
-            return new Date(dateString).toLocaleDateString('ru-RU');
         },
         getErrorMessage(error) {
             if (error.response?.status === 404) {
@@ -180,7 +181,7 @@ export default {
     margin-left: 20px;
 }
 
-.edit-btn, .delete-btn {
+.edit-btn {
     padding: 4px 8px;
     border: none;
     background: none;
@@ -188,7 +189,7 @@ export default {
     font-size: 14px;
 }
 
-.edit-btn:hover, .delete-btn:hover {
+.edit-btn:hover {
     text-decoration: underline;
 }
 

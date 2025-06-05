@@ -1,22 +1,22 @@
 <template>
-    <div class="project-list-container">
+    <div class="group-list-container">
         <div class="list-header">
             <div class="header-content">
-                <h1 class="list-title">Проекты</h1>
+                <h1 class="list-title">Группы</h1>
             </div>
 
             <div class="header-content">
                 <SearchInput
                     v-model="searchQuery"
-                    placeholder="Поиск проектов..."
+                    placeholder="Поиск групп..."
                     @search="handleSearch"
                 />
                 <router-link
-                    to="/project/create"
+                    to="/group/create"
                     class="primary-button"
                 >
                     <i class="bi bi-plus-lg"></i>
-                    Новый проект
+                    Новая группа
                 </router-link>
             </div>
         </div>
@@ -24,7 +24,7 @@
         <div class="content-wrapper">
             <div v-if="loading" class="loading-state">
                 <div class="spinner"></div>
-                Загрузка проектов...
+                Загрузка групп...
             </div>
 
             <div v-else-if="error" class="error-state">
@@ -32,12 +32,12 @@
                 {{ error }}
             </div>
 
-            <div v-else-if="filteredProjects.length === 0" class="empty-state">
-                <i class="bi bi-folder"></i>
-                Нет доступных проектов
+            <div v-else-if="filteredGroups.length === 0" class="empty-state">
+                <i class="bi bi-people"></i>
+                Нет доступных групп
             </div>
 
-            <table v-else class="projects-table">
+            <table v-else class="groups-table">
                 <thead>
                 <tr>
                     <th
@@ -57,21 +57,16 @@
                 </thead>
                 <tbody>
                 <tr
-                    v-for="project in sortedProjects"
-                    :key="project.id"
-                    @click="openProject(project.id)"
+                    v-for="group in sortedGroups"
+                    :key="group.id"
+                    @click="openGroup(group.id)"
                 >
                     <td>
-                        <i class="bi bi-folder"></i>
-                        {{ project.name }}
+                        <i class="bi bi-people"></i>
+                        {{ group.name }}
                     </td>
-                    <td>{{ formatDate(project.start_time) || "Не указано"}}</td>
-                    <td>{{ formatDate(project.end_time) || "Не указано"}}</td>
-                    <td>
-              <span class="status-badge" :class="getStatusClass(project)">
-                {{ getProjectStatus(project) }}
-              </span>
-                    </td>
+                    <td>{{ group.users_count || 0 }}</td>
+                    <td>{{ group.projects_count || 0 }}</td>
                 </tr>
                 </tbody>
             </table>
@@ -82,6 +77,7 @@
 <script>
 import axios from 'axios'
 import SearchInput from "@/components/SearchInput.vue";
+import {useAuthStore} from "@/stores/auth";
 import {useErrorHandling} from "@/utils/ErrorHandling";
 
 export default {
@@ -90,26 +86,30 @@ export default {
         return {
             loading: true,
             error: null,
-            projects: [],
+            groups: [],
             searchQuery: '',
             sortKey: 'name',
             sortOrder: 'asc',
             tableHeaders: [
                 {title: 'Название', key: 'name', sortable: true},
-                {title: 'Начало', key: 'start_time', sortable: true},
-                {title: 'Окончание', key: 'end_time', sortable: true},
-                {title: 'Статус', key: 'status', sortable: true}
+                {title: 'Участники', key: 'users_count', sortable: true},
+                {title: 'Проекты', key: 'projects_count', sortable: true}
             ]
         }
     },
     computed: {
-        filteredProjects() {
-            return this.projects.filter(project =>
-                project.name.toLowerCase().includes(this.searchQuery.toLowerCase()))
+        filteredGroups() {
+            return this.groups.filter(group =>
+                group.name.toLowerCase().includes(this.searchQuery.toLowerCase()))
         },
-        sortedProjects() {
-            return [...this.filteredProjects].sort((a, b) => {
+        sortedGroups() {
+            return [...this.filteredGroups].sort((a, b) => {
                 const modifier = this.sortOrder === 'asc' ? 1 : -1
+
+                if (this.sortKey === 'users_count' || this.sortKey === 'projects_count') {
+                    return (a[this.sortKey] - b[this.sortKey]) * modifier
+                }
+
                 if (a[this.sortKey] < b[this.sortKey]) return -1 * modifier
                 if (a[this.sortKey] > b[this.sortKey]) return 1 * modifier
                 return 0
@@ -117,52 +117,70 @@ export default {
         }
     },
     async mounted() {
-        this.loadUserProjects();
+        await this.loadUserGroups();
     },
     setup() {
         const {handleApiError} = useErrorHandling();
         return {handleApiError};
     },
     methods: {
-        async loadUserProjects() {
+        async loadUserGroups() {
             this.loading = true;
             try {
+                const authStore = useAuthStore();
+                const currentUserId = authStore.user?.id;
+
                 const response = await axios.get(
+                    'http://localhost:8000/account/groups/',
+                    {withCredentials: true}
+                );
+
+                const projectsResponse = await axios.get(
                     'http://localhost:8000/project/',
                     {withCredentials: true}
                 );
-                this.projects = response.data || [];
+                const allGroups = response.data || [];
+                if (!Array.isArray(allGroups)) {
+                    throw new Error('Некорректный формат данных групп');
+                }
+
+                const userGroups = allGroups.filter(group =>
+                    group && group.users && Array.isArray(group.users) && group.users.includes(currentUserId)
+                );
+                const allProjects = projectsResponse.data || [];
+                if (!Array.isArray(allProjects)) {
+                    throw new Error('Некорректный формат данных проектов');
+                }
+
+                const projectsByGroup = {};
+                allProjects.forEach(project => {
+                    if (project && project.group) {
+                        const groupId = project.group;
+
+                        if (userGroups.some(g => g.id === groupId)) {
+                            projectsByGroup[groupId] = (projectsByGroup[groupId] || 0) + 1;
+                        }
+                    }
+                });
+
+                this.groups = userGroups.map(group => ({
+                    ...group,
+                    users_count: group.users ? group.users.length : 0,
+                    projects_count: projectsByGroup[group.id] || 0
+                }));
+
+
             } catch (error) {
                 this.handleApiError(error);
                 if (error.response?.status === 403) {
                     this.$router.push('/login');
                 } else {
-                    console.error('Ошибка загрузки проектов:', error);
-                    this.projects = [];
+                    console.error('Ошибка загрузки групп:', error);
+                    this.error = 'Не удалось загрузить список групп';
+                    this.groups = [];
                 }
             } finally {
                 this.loading = false;
-            }
-        },
-        formatDate(dateString) {
-            if (!dateString) return ''
-            return new Date(dateString).toLocaleDateString('ru-RU')
-        },
-        getProjectStatus(project) {
-            const now = new Date()
-            const start = new Date(project.start_time)
-            const end = new Date(project.end_time)
-
-            if (now < start) return 'Запланирован'
-            if (now > end) return 'Завершен'
-            return 'Активен'
-        },
-        getStatusClass(project) {
-            const status = this.getProjectStatus(project)
-            return {
-                'planned': status === 'Запланирован',
-                'active': status === 'Активен',
-                'completed': status === 'Завершен'
             }
         },
         sortBy(key) {
@@ -173,18 +191,17 @@ export default {
                 this.sortOrder = 'asc'
             }
         },
-        openProject(id) {
-            this.$router.push(`/project/${id}`)
+        openGroup(id) {
+            this.$router.push(`/group/${id}`)
         },
         handleSearch() {
-            this.$emit('search-changed', this.searchQuery);
         }
     }
 }
 </script>
 
 <style scoped>
-.project-list-container {
+.group-list-container {
     max-width: 1200px;
     margin: 0 auto;
     padding: 24px;
@@ -254,7 +271,7 @@ export default {
     color: #5e6c84;
 }
 
-.projects-table {
+.groups-table {
     width: 100%;
     border-collapse: collapse;
     background: white;
@@ -263,26 +280,26 @@ export default {
     overflow: hidden;
 }
 
-.projects-table th,
-.projects-table td {
+.groups-table th,
+.groups-table td {
     padding: 12px 16px;
     text-align: left;
     border-bottom: 1px solid #ebecf0;
 }
 
-.projects-table th {
+.groups-table th {
     background-color: #f4f5f7;
     color: #5e6c84;
     font-weight: 600;
     font-size: 14px;
 }
 
-.projects-table tbody tr {
+.groups-table tbody tr {
     transition: background-color 0.2s;
     cursor: pointer;
 }
 
-.projects-table tbody tr:hover {
+.groups-table tbody tr:hover {
     background-color: #fafbfc;
 }
 
@@ -295,36 +312,12 @@ export default {
     background-color: #ebecf0;
 }
 
-.project-name {
+.group-name {
     display: flex;
     align-items: center;
     gap: 8px;
     font-weight: 500;
     color: #172b4d;
-}
-
-.status-badge {
-    display: inline-block;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: 500;
-    text-transform: uppercase;
-}
-
-.status-badge.planned {
-    background-color: #fff0b3;
-    color: #172b4d;
-}
-
-.status-badge.active {
-    background-color: #deebff;
-    color: #0747a6;
-}
-
-.status-badge.completed {
-    background-color: #e3fcef;
-    color: #006644;
 }
 
 .loading-state,
@@ -354,5 +347,15 @@ export default {
     to {
         transform: rotate(360deg);
     }
+}
+
+.groups-table td:first-child {
+    width: 50%;
+}
+
+.groups-table td:nth-child(2),
+.groups-table td:nth-child(3) {
+    width: 25%;
+    text-align: center;
 }
 </style>
