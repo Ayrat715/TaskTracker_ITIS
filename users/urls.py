@@ -3,7 +3,7 @@ from django.urls import path, include
 from rest_framework import routers
 
 from users import views
-from users.views import GroupViewSet
+from users.views import GroupViewSet, UserDetailView
 
 app_name = 'users'
 
@@ -17,4 +17,5 @@ urlpatterns = [
     path('user/', views.UserStatus.as_view(), name='user_status'),
     path('logout/', LogoutView.as_view(), name='logout'),
     path('', include(router.urls)),
+    path('users/<int:id>/', UserDetailView.as_view(), name='user-detail'),
 ]

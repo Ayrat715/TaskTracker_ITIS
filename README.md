@@ -361,6 +361,9 @@ API Endpoints
 ### DELETE account/groups/{pk}/remove-user/{user_id}/ - удаление пользователя из группы
 
 
+### GET /account/users/{pk}/ - получение пользователя и его групп
+
+
 ### GET task/priorities/ - список всех приоритетов
 #### Ответ (200 OK):
     [

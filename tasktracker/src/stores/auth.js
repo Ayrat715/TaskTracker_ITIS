@@ -1,51 +1,47 @@
 import axios from "axios";
-import {defineStore} from "pinia";
-
+import { defineStore } from "pinia";
 
 export const useAuthStore = defineStore('auth', {
     state: () => ({
-        user: JSON.parse(localStorage.getItem('authUser')) || null,
-        isAuthenticated: !!localStorage.getItem('authUser')
+        user: null,
+        isAuthenticated: false,
     }),
     actions: {
-        setUser(userData) {
-            this.user = userData;
-            this.isAuthenticated = !!userData;
-            if (userData) {
-                localStorage.setItem('authUser', JSON.stringify(userData));
-            } else {
-                localStorage.removeItem('authUser');
-            }
-        },
-        async initialize() {
-            const savedUser = localStorage.getItem('authUser');
-            if (savedUser) {
-                this.user = JSON.parse(savedUser);
+        async checkAuth() {
+            try {
+                const response = await axios.get('http://localhost:8000/account/user/', {
+                    withCredentials: true,
+                });
+                this.user = response.data;
                 this.isAuthenticated = true;
+                return true;
+            } catch (error) {
+                this.user = null;
+                this.isAuthenticated = false;
+                return false;
             }
         },
         async logout() {
             try {
-                await axios.get('http://localhost:8000/account/logout', {}, {
+                await axios.get('http://localhost:8000/account/logout', {
                     withCredentials: true,
                     headers: {
                         'X-CSRFToken': this.getCookie('csrftoken'),
                     }
                 });
+                this.user = null;
                 this.isAuthenticated = false;
-                localStorage.removeItem('authUser');
                 localStorage.removeItem('lastViewedProject');
                 localStorage.removeItem('lastViewedSprint');
-                this.setUser(null);
                 window.location.href = '/login';
             } catch (error) {
                 console.error('Logout failed:', error);
             }
         },
         getCookie(name) {
-            const value = `; ${document.cookie}`
-            const parts = value.split(`; ${name}=`)
-            if (parts.length === 2) return parts.pop().split(';').shift()
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
         }
     }
-})
+});

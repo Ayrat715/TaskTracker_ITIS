@@ -13,7 +13,7 @@ from rest_framework.views import APIView
 
 from users.serializers import (UserRegistrationSerializer, UserLoginSerializer,
                                UserSerializer, GroupCreateSerializer,
-                               GroupUpdateSerializer, User, UserDataSerializer)
+                               GroupUpdateSerializer, User, UserDataSerializer, UserDetailSerializer)
 from users.users_permitions import UserPermitions
 
 
@@ -287,3 +287,9 @@ class UserStatus(generics.RetrieveAPIView):
     def get_object(self) -> User:
         if self.request.user.is_authenticated:
             return User.objects.get(id=self.request.user.id)
+
+
+class UserDetailView(generics.RetrieveAPIView):
+    queryset = User.objects.all().prefetch_related('groups')
+    serializer_class = UserDetailSerializer
+    lookup_field = 'id'

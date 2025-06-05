@@ -21,15 +21,6 @@
                         class="form-input"
                     >
                 </div>
-                <div class="remember-me">
-                    <label>
-                        <input
-                            type="checkbox"
-                            v-model="rememberMe"
-                        />
-                        Запомнить меня
-                    </label>
-                </div>
                 <button type="submit" class="submit-btn" :disabled="loading">
                     Войти
                 </button>
@@ -54,7 +45,6 @@ export default {
         return {
             email: '',
             password: '',
-            rememberMe: false,
             error: '',
             loading: false
         }
@@ -63,13 +53,6 @@ export default {
         const authStore = useAuthStore()
         const router = useRouter()
         return {authStore, router}
-    },
-    mounted() {
-        const savedEmail = localStorage.getItem('rememberedEmail')
-        if (savedEmail) {
-            this.email = savedEmail
-            this.rememberMe = true
-        }
     },
     methods: {
         async handleLogin() {
@@ -88,18 +71,17 @@ export default {
                     }
                 })
 
-                if (response.data['user-data']) {
-                    this.authStore.setUser(response.data['user-data']);
-                    if (this.rememberMe) {
-                        localStorage.setItem('rememberedEmail', this.email);
+                if (response.data.message === 'Login successful') {
+                    const isAuthenticated = await this.authStore.checkAuth();
+                    if (isAuthenticated) {
                         localStorage.removeItem('lastViewedProject');
                         localStorage.removeItem('lastViewedSprint');
+                        await this.router.push({ name: 'home' });
                     } else {
-                        localStorage.removeItem('rememberedEmail');
+                        this.error = 'Ошибка аутентификации';
                     }
-                    await this.router.push({name: 'home'});
                 } else {
-                    this.error = 'Ошибка: сервер не вернул данные пользователя';
+                    this.error = 'Ошибка: сервер не вернул подтверждение входа';
                 }
             } catch
                 (err) {
@@ -196,44 +178,6 @@ export default {
     cursor: not-allowed;
 }
 
-.remember-me {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.remember-me label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-}
-
-.remember-me input[type="checkbox"] {
-    appearance: none;
-    -webkit-appearance: none;
-    width: 18px;
-    height: 18px;
-    border: 1px solid #000;
-    border-radius: 3px;
-    cursor: pointer;
-    position: relative;
-    outline: none;
-}
-
-.remember-me input[type="checkbox"]:checked {
-    background-color: #000;
-}
-
-.remember-me input[type="checkbox"]:checked::after {
-    content: "✓";
-    color: white;
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 12px;
-}
 
 .register-link {
     text-align: center;
