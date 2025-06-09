@@ -7,7 +7,6 @@ from tasks.ml_category import keyword_matcher, CategoryClassifier
 from tasks.models import Task, TaskCategory
 logger = logging.getLogger(__name__)
 
-
 @receiver(post_save, sender=Task)
 def categorize_task(sender, instance, created, **kwargs):
     """

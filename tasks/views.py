@@ -1,3 +1,5 @@
+import json
+
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.http import Http404
@@ -5,7 +7,10 @@ from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
-from tasks.serializers import SprintSerializer, TaskSerializer, StatusSerializer, PrioritySerializer
+
+from tasks.recommendation_performers.services import recommend_employees
+from tasks.serializers import SprintSerializer, TaskSerializer, \
+    StatusSerializer, PrioritySerializer, RecommendationEmployeeSerializer
 from tasks.models import Sprint, Task, Executor, Priority, Status
 import logging
 logger = logging.getLogger(__name__)
@@ -83,3 +88,19 @@ def update_employee_load(sender, instance, **kwargs):
     # Обновляем и сохраняем нагрузку сотрудника
     employee.current_load = total_load
     employee.save(update_fields=['current_load'])
+
+
+class EmployeeRecommendation(APIView):
+    def get(self, request):
+        serializer = RecommendationEmployeeSerializer(data=request.query_params,
+                                                      required=True)
+        if serializer.is_valid():
+            return Response(
+                json.dumps(recommend_employees(serializer)),
+                status=status.HTTP_200_OK
+            )
+        else:
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )

@@ -9,6 +9,7 @@ class Project(models.Model):
     start_time = models.DateTimeField(null=False)
     end_time = models.DateTimeField(null=True)
     group = models.ForeignKey(Group, on_delete=models.CASCADE)
+
     def clean(self):
         if self.end_time is not None and self.start_time >= self.end_time:
             raise ValidationError("End time must be after start time.")

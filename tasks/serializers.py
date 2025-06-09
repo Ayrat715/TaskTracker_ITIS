@@ -153,3 +153,11 @@ class TaskSerializer(serializers.ModelSerializer):
                 ])
 
         return task
+
+
+class RecommendationEmployeeSerializer(serializers.ModelSerializer):
+    sprint = serializers.PrimaryKeyRelatedField(queryset=Sprint.objects.all())
+
+    class Meta:
+        model = Task
+        fields = ['priority', 'category', 'description', 'start_time', 'sprint']
