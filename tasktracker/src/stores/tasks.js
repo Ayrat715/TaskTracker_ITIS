@@ -13,8 +13,5 @@ export const useTasksStore = defineStore('tasks', {
                 console.error('Ошибка загрузки приоритетов:', error);
             }
         },
-        setProjectTaskNumbers(taskNumbers) {
-            this.projectTaskNumbers = taskNumbers;
-        }
     }
 });

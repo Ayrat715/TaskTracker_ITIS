@@ -26,17 +26,16 @@
                 <div v-else>
                     <p>Пожалуйста, войдите в систему.</p>
                 </div>
+                <div class="search-box-container">
+                    <div class="search-box">
+                        <input type="text" class="search-input" placeholder="Поиск задач..." v-model="searchQuery">
+                        <i class="bi bi-search"></i>
+                    </div>
+                </div>
+
             </div>
 
-            <div class="search-box-container">
-                <div class="search-box">
-                    <SearchInput
-                        v-model="searchQuery"
-                        placeholder="Поиск задач..."
-                        @search="handleSearch"
-                    />
-                </div>
-            </div>
+
         </div>
 
         <div class="header-bottom" v-if="currentProject && currentProject.id">
@@ -76,8 +75,9 @@
                           :title="currentSprint.description">
                         Описание спринта: {{ currentSprint.description }}
                     </span>
-                    <CreateTaskBtn></CreateTaskBtn>
+                    <CreateTaskBtn :onClick="createSprint">Начать спринт</CreateTaskBtn>
                 </div>
+                <CreateTaskBtn></CreateTaskBtn>
             </div>
 
 
@@ -91,12 +91,12 @@ import {debounce} from 'lodash';
 import axios from "axios";
 import {useAuthStore} from "@/stores/auth";
 import CreateTaskBtn from "@/components/CreateTaskBtn.vue";
-import SearchInput from "@/components/SearchInput.vue";
 import router from "@/router";
+import {useErrorHandling} from "@/utils/ErrorHandling";
 
 
 export default {
-    components: {SearchInput, CreateTaskBtn},
+    components: {CreateTaskBtn},
     props: {
         currentProject: {
             type: Object,
@@ -148,7 +148,14 @@ export default {
         this.debouncedSearch.cancel();
         this.loadUserProjects();
     },
+    setup() {
+        const {handleApiError} = useErrorHandling();
+        return {handleApiError};
+    },
     methods: {
+        createSprint() {
+            this.$router.push(`project/${this.currentProject.id}/sprint/create`);
+        },
         router() {
             return router
         },
@@ -203,13 +210,9 @@ export default {
                     {withCredentials: true}
                 );
                 this.userProjects = response.data || [];
+
             } catch (error) {
-                if (error.response?.status === 403) {
-                    this.$router.push('/login');
-                } else {
-                    console.error('Ошибка загрузки проектов:', error);
-                    this.userProjects = [];
-                }
+                this.handleApiError(error);
             } finally {
                 this.loadingProjects = false;
             }
@@ -231,9 +234,6 @@ export default {
                 this.$emit('project-changed', project);
             }
             this.showProjectsDropdown = false;
-        },
-        createNewTask() {
-            this.$router.push('/task/create');
         },
         handleSearch() {
             this.$emit('search-changed', this.searchQuery);
@@ -268,19 +268,27 @@ export default {
     position: relative;
 }
 
-
-.search-box-container {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
+.page-info {
+    display: flex;
+    align-items: center;
 }
 
+.search-box-container {
+    flex: 0 0 300px;
+    margin-right: 16px;
+}
+
+.search-box {
+    width: 100%;
+    margin-left: 50px;
+}
 
 .page-info {
     display: flex;
     align-items: center;
     font-size: 18px;
     flex: 1;
+
 }
 
 
@@ -297,12 +305,13 @@ export default {
 .project-name {
     font-weight: 400;
     color: #333;
+    text-overflow: ellipsis;
 
 }
 
 .search-box {
     position: relative;
-    width: 300px;
+    width: 400px;
 }
 
 .search-box input {

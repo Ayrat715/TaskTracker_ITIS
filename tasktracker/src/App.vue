@@ -3,14 +3,7 @@
         <div class="app-container">
             <aside class="sidebar" v-if="showHeaderSideBar" :class="isCollapsed || isMobile ? 'collapsed': ''">
                 <div class="sidebar-top">
-                    <!--                    <div class="logo" @click="$router.push('/')">-->
-                    <!--                        <img src="@/assets/logo.svg" alt="Logo">-->
-                    <!--                    </div>-->
                     <nav class="sidebar-nav">
-                        <router-link to="/settings" class="nav-item">
-                            <span class="icon-wrapper"><i class="bi bi-gear"></i></span>
-                            <span>Настройки</span>
-                        </router-link>
 
                         <button class="nav-item create-btn" @click="showCreateMenu = !showCreateMenu" >
                             <span class="icon-wrapper"><i class="bi bi-plus-lg"></i></span>
@@ -26,8 +19,6 @@
                             <span class="icon-wrapper"><i class="bi bi-people"></i></span>
                             <span>Группы</span>
                         </router-link>
-
-
                     </nav>
                 </div>
 
@@ -82,14 +73,6 @@
                 <footer v-if="showHeaderSideBar" class="main-footer">
                     <div class="footer-content">
                         <div class="footer-links">
-                            <router-link to="/reports" class="footer-btn">
-                                <i class="bi bi-graph-up"></i>
-                                <span>Отчеты</span>
-                            </router-link>
-                            <router-link to="/my-tasks" class="footer-btn">
-                                <i class="bi bi-pencil-square"></i>
-                                <span>Мои задачи</span>
-                            </router-link>
                             <router-link to="/" class="footer-btn">
                                 <i class="bi bi-list"></i>
                                 <span>Доски Agile</span>
@@ -221,10 +204,9 @@ export default {
     },
     computed: {
         showHeaderSideBar() {
-            return this.$route.name !== 'notFound' && this.$route.name !== 'register' && this.$route.name !== 'login';
-        },
-        isAgileBoard() {
-            return this.$route.name === 'home';
+            return this.$route.name !== 'notFound' && this.$route.name !== 'register' && this.$route.name !== 'login'
+                && this.$route.name !== 'access-denied' && this.$route.name !== 'not-found'
+                && this.$route.name !== 'network-error';
         },
     },
 }
