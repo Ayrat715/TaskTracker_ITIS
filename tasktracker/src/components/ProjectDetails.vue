@@ -331,9 +331,9 @@ export default {
         if (this.$route.path.includes('/roles')) {
             await this.fetchRoles()
         }
-        if (this.$route.path.includes('/team')) {
-            await this.fetchAvailableUsers()
-        }
+
+        await this.fetchAvailableUsers()
+
     },
     watch: {
         '$route'(to) {
