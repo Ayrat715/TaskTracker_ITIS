@@ -4,12 +4,6 @@
             <aside class="sidebar" v-if="showHeaderSideBar" :class="isCollapsed || isMobile ? 'collapsed': ''">
                 <div class="sidebar-top">
                     <nav class="sidebar-nav">
-
-                        <button class="nav-item create-btn" @click="showCreateMenu = !showCreateMenu" >
-                            <span class="icon-wrapper"><i class="bi bi-plus-lg"></i></span>
-                            <span>Создать</span>
-                        </button>
-
                         <router-link to="/projects" class="nav-item">
                             <span class="icon-wrapper"><img src="../src/assets/projects.png"></span>
                             <span>Проекты</span>
@@ -19,6 +13,11 @@
                             <span class="icon-wrapper"><i class="bi bi-people"></i></span>
                             <span>Группы</span>
                         </router-link>
+
+                        <button class="nav-item create-btn" @click="showCreateMenu = !showCreateMenu" >
+                            <span class="icon-wrapper"><i class="bi bi-plus-lg"></i></span>
+                            <span>Создать</span>
+                        </button>
                     </nav>
                 </div>
 

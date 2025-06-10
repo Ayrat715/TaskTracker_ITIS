@@ -1,5 +1,10 @@
 <template>
     <div class="create-project-page">
+        <div class="history-header">
+            <div class="filters">
+                <div class="search-container"></div>
+            </div>
+        </div>
         <h2>Создание нового проекта</h2>
         <form @submit.prevent="submitForm" class="project-form">
             <div class="form-group">
@@ -41,7 +46,7 @@
                 <div class="form-group">
                     <label>Дата начала *</label>
                     <input
-                        type="date"
+                        type="datetime-local"
                         v-model="formData.start_time"
                         required
                         class="form-control"
@@ -51,7 +56,7 @@
                 <div class="form-group">
                     <label>Дата окончания *</label>
                     <input
-                        type="date"
+                        type="datetime-local"
                         v-model="formData.end_time"
                         required
                         class="form-control"
@@ -288,4 +293,11 @@ select.form-control {
     background-size: 16px;
     padding-right: 32px;
 }
+.history-header {
+    display: flex;
+    margin-bottom: 24px;
+    padding: 8px 0;
+    border-bottom: 1px solid #e5e5e5;
+}
+
 </style>

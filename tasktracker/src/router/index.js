@@ -22,6 +22,7 @@ import AccessDenied from "@/components/AccessDenied.vue";
 import NotFound from "@/components/NotFound.vue";
 import NetworkError from "@/components/NetworkError.vue";
 import {useErrorStore} from "@/stores/error";
+import TaskCreate from "@/components/TaskCreate.vue";
 
 
 const routes = [
@@ -45,6 +46,7 @@ const routes = [
     {path: '/network-error', name: 'network-error', component: NetworkError},
     {path: '/not-found', name: 'not-found', component: NotFound},
     {path: '/:pathMatch(.*)*', redirect: '/not-found'},
+    {path: '/task/create', name: 'task-create', component: TaskCreate},
     {
         path: '/group/:id',
         component: GroupDetails,
