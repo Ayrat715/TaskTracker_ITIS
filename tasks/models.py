@@ -178,6 +178,10 @@ class Task(models.Model):
         features = extract_task_features(self, base_time)
         return [[features]]
 
+    def category_id(self):
+        """Возвращает ID категории или None если категория не назначена"""
+        return self.category.id if self.category else None
+
 class Executor(models.Model):
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
     task = models.ForeignKey(Task, on_delete=models.CASCADE)

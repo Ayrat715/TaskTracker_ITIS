@@ -197,7 +197,7 @@ export default {
                 const response = await axios.get(
                     `http://localhost:8000/task/tasks/${this.$route.params.id}/`
                 )
-                const firstSprintId = response.data.sprint_ids[1];
+                const firstSprintId = response.data.sprint_ids[0];
                 const sprintsResponse = await axios.get(`http://localhost:8000/task/sprints/`);
                 const sprint = sprintsResponse.data.find(s => s.id === firstSprintId);
                 if (!sprint) {

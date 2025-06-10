@@ -1,5 +1,10 @@
 <template>
     <div class="create-sprint-page">
+        <div class="history-header">
+            <div class="filters">
+                <div class="search-container"></div>
+            </div>
+        </div>
         <h2>Создание нового спринта</h2>
         <form @submit.prevent="submitForm" class="sprint-form">
             <div class="form-group">
@@ -283,5 +288,11 @@ select.form-control {
     background-position: right 8px center;
     background-size: 16px;
     padding-right: 32px;
+}
+.history-header {
+    display: flex;
+    margin-bottom: 24px;
+    padding: 8px 0;
+    border-bottom: 1px solid #e5e5e5;
 }
 </style>

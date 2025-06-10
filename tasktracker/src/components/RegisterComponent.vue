@@ -29,9 +29,6 @@
                         required
                         class="form-input"
                     >
-                    <p class="password-hint" v-if="password.length > 0">
-                        Пароль не должен содержать ваше имя или часть email
-                    </p>
                 </div>
                 <div class="form-group">
                     <input

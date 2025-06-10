@@ -45,19 +45,6 @@
                     <h3>Описание</h3>
                     <p class="description-text">{{ task.description || 'Описание отсутствует' }}</p>
                 </div>
-
-                <div class="task-section" v-if="task.comments?.length">
-                    <h3>Комментарии ({{ task.comments.length }})</h3>
-                    <div class="comments-list">
-                        <div v-for="comment in task.comments" :key="comment.id" class="comment">
-                            <div class="comment-header">
-                                <span class="comment-author">{{ comment.author.name }}</span>
-                                <span class="comment-date">{{ formatDate(comment.created_at) }}</span>
-                            </div>
-                            <div class="comment-text">{{ comment.body }}</div>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <div class="right-column">
@@ -208,7 +195,7 @@ export default {
                     throw error;
                 }
 
-                const firstSprintId = taskResponse.data.sprint_ids[1];
+                const firstSprintId = taskResponse.data.sprint_ids[0];
 
                 const sprintsResponse = await axios.get(`http://localhost:8000/task/sprints/`);
                 const sprint = sprintsResponse.data.find(s => s.id === firstSprintId);

@@ -96,7 +96,8 @@ class TaskSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        representation.pop('category', None)
+        # representation.pop('category', None)
+        representation['category'] = instance.category_id
         representation.pop('nlp_metadata', None)
 
         representation['executor_ids'] = list(

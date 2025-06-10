@@ -1,5 +1,10 @@
 <template>
     <div class="create-group-page">
+        <div class="history-header">
+            <div class="filters">
+                <div class="search-container"></div>
+            </div>
+        </div>
         <h2>Создание новой группы</h2>
         <form @submit.prevent="submitForm" class="group-form">
             <div class="form-group">
@@ -142,7 +147,6 @@ export default {
                 this.searchResults = response.data.filter(user =>
                     !this.selectedUsers.some(u => u.id === user.id))
             } catch (error) {
-                this.handleApiError(error);
                 console.error('Ошибка поиска пользователей:', error)
             }
         },
@@ -395,5 +399,11 @@ textarea.form-control {
     padding: 10px 15px;
     color: #7f8c8d;
     font-style: italic;
+}
+.history-header {
+    display: flex;
+    margin-bottom: 24px;
+    padding: 8px 0;
+    border-bottom: 1px solid #e5e5e5;
 }
 </style>

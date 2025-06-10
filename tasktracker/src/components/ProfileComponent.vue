@@ -2,9 +2,6 @@
     <div class="user-profile">
         <div class="profile-header">
             <h2>Профиль пользователя
-                <span v-if="isCurrentUser" class="edit-button">
-                    <button @click="editProfile" class="edit-btn"><i class="bi bi-pencil"></i></button>
-                </span>
             </h2>
         </div>
 
@@ -74,9 +71,6 @@ export default {
         return {handleApiError};
     },
     methods: {
-        editProfile() {
-            this.$router.push(`/user/${this.authStore.user?.id}/edit`)
-        },
         async fetchUserData() {
             this.loading = true;
             this.error = null;
